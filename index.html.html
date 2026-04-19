@@ -63,7 +63,22 @@
             top: 0;
             border-radius: 0;
             border-left: 1px solid var(--glass-border);
+            transition: width 0.3s ease, padding 0.3s ease;
+            overflow-x: hidden;
+            white-space: nowrap;
+            z-index: 100;
         }
+        .sidebar.collapsed {
+            width: 0;
+            padding-left: 0;
+            padding-right: 0;
+            border: none;
+        }
+        .toggle-sidebar-btn {
+            background: transparent; border: none; color: var(--primary); font-size: 1.5rem; cursor: pointer; transition: 0.2s;
+        }
+        .toggle-sidebar-btn:hover { color: var(--primary-hover); transform: scale(1.1); }
+		
         html[dir="ltr"] .sidebar {
             border-left: none;
             border-right: 1px solid var(--glass-border);
@@ -294,6 +309,9 @@
         <div class="nav-item active" onclick="showSection('home', this)">
             <i class="fas fa-home"></i> <span class="txt-home">الرئيسية</span>
         </div>
+		<div class="nav-item" id="nav-all-cats" onclick="showSection('all-cats', this); loadAllCategories();">
+            <i class="fas fa-th-list"></i> <span>جميع الأقسام</span>
+        </div>
         <div class="nav-item" onclick="showSection('notes', this)">
             <i class="fas fa-book"></i> <span class="txt-notes">ملاحظاتي الدائمة</span>
         </div>
@@ -319,7 +337,9 @@
     <!-- Main Content -->
     <main class="main-content">
         <header class="top-bar">
-            <div class="lang-switch">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="إخفاء/إظهار القائمة"><i class="fas fa-bars"></i></button>
+                <div class="lang-switch">
                 <button class="lang-btn active" onclick="switchLang('ar', this)">العربية</button>
                 <button class="lang-btn" onclick="switchLang('en', this)">English</button>
 				</div>
@@ -521,6 +541,10 @@
             <h3 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-dark); border-bottom: 2px solid var(--glass-border); padding-bottom: 10px;">مثبتاتي (Pinned Items)</h3>
             <div id="workspace-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
                 </div>
+        </section>
+		<section id="sec-all-cats" class="hidden">
+            <div class="section-title"><i class="fas fa-th-list" style="color: var(--primary);"></i> جميع الأقسام</div>
+            <div class="bento-categories" id="all-categories-container"></div>
         </section>
 <section id="sec-honor" class="hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
@@ -812,6 +836,7 @@
         let currentUser = null; // { id, username, role, notes }
         let currentAuthMode = 'login'; // login or register
         let problemsCache = [];
+		let categoriesCache = []; // كاش الأقسام لتسريع العرض ومنع التداخل
         let currentlyViewingProb = null; // تعديل جذري لضمان قراءة المشكلة الصحيحة
 
         // Translation Dictionary
@@ -884,6 +909,7 @@
             document.getElementById('sec-users').classList.add('hidden'); // السطر اللي كان ناقص!
             document.getElementById('sec-audit').classList.add('hidden');
 			document.getElementById('sec-honor').classList.add('hidden');
+			if(document.getElementById('sec-all-cats')) document.getElementById('sec-all-cats').classList.add('hidden');
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             // إظهار القسم المطلوب فقط
@@ -1029,6 +1055,34 @@ function authModeTextUpdate() {
             }
         }
 
+
+// ==========================================
+        // 🛡️ SECURITY & ANTI-SNOOPING (حماية الكود)
+        // ==========================================
+        
+        // منع الزر الأيمن للماوس (باستثناء المدير والأدمن)
+        document.addEventListener('contextmenu', function(e) {
+            if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return; // السماح للمدراء
+            e.preventDefault();
+        });
+
+        // منع اختصارات لوحة المفاتيح (باستثناء المدير والأدمن)
+        document.onkeydown = function(e) {
+            if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return true; // السماح للمدراء
+
+            if (
+                e.key === 'F12' || 
+                (e.ctrlKey && (e.key === 'u' || e.key === 'U')) || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I')) || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'j' || e.key === 'J')) || 
+                (e.ctrlKey && (e.key === 's' || e.key === 'S'))
+            ) {
+                e.preventDefault();
+                return false;
+            }
+        };
+		
+		
         // ==========================================
         // 4. CUSTOM WYSIWYG EDITOR LOGIC
         // ==========================================
@@ -1316,16 +1370,14 @@ function authModeTextUpdate() {
             }
         }
 
-async function renderProblems(problems) {
-            // 1. جلب الأقسام من قاعدة البيانات أولاً (الانتظار هنا قبل مسح الشاشة)
-            const { data: cats } = await supabase.from('kb_categories').select('*');
+function renderProblems(problems) {
+            // استخدام الكاش بدلاً من جلب الأقسام من السيرفر كل مرة (هذا ما كان يسبب التأخير والتداخل!)
+            const cats = categoriesCache; 
 
-            // 2. تفريغ الحاوية (وضعناها هنا لمنع تكرار الكروت عند الكتابة السريعة في البحث)
             const container = document.getElementById('problems-container');
             container.innerHTML = ''; 
 
             let filteredProbs = problems;
-
             // المستخدم العادي يرى المفعل فقط، المدير والأدمن يرون الكل
             if (!currentUser || currentUser.role === 'user') {
                 filteredProbs = filteredProbs.filter(p => p.status === 'active' || !p.status);
@@ -1734,12 +1786,46 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
             }
         }
 		
+		function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        }
+
+        async function loadAllCategories() {
+            const { data: cats } = await supabase.from('kb_categories').select('*').order('is_pinned', { ascending: false });
+            const container = document.getElementById('all-categories-container');
+            container.innerHTML = '';
+            
+            if(cats) {
+                cats.forEach(c => {
+                    const icon = c.icon || 'fas fa-folder';
+                    const name = currentLang === 'ar' ? c.name_ar : c.name_en;
+                    const isPinned = c.is_pinned ? 'pinned' : '';
+                    const pinBtn = (currentUser && currentUser.role === 'moderator') ? `<i class="fas fa-thumbtack cat-pin-badge ${isPinned}" onclick="event.stopPropagation(); togglePinCategory('${c.id}', ${c.is_pinned})" title="تثبيت القسم في الرئيسية"></i>` : '';
+
+                    let iconHtml = (icon && (icon.startsWith('http') || icon.includes('/'))) 
+                        ? `<img src="${icon}" style="width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0px 6px 8px rgba(0,0,0,0.15));">` 
+                        : `<i class="${icon || 'fas fa-folder'}"></i>`;
+
+                    container.innerHTML += `
+                        <div class="cat-card" onclick="filterByCategory('${c.id}')">
+                            ${pinBtn}
+                            <div class="cat-icon-wrapper" style="background: transparent;">${iconHtml}</div>
+                            <div class="cat-title">${name}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+		
 // ==========================================
         // 7. BENTO GRID HOME & SEARCH LOGIC
         // ==========================================
         async function loadHomeData() {
             // 1. جلب الأقسام ورسمها
             const { data: cats } = await supabase.from('kb_categories').select('*').order('is_pinned', { ascending: false });
+            
+            if(cats) categoriesCache = cats; // تخزين الأقسام في الذاكرة لتسريع النظام
+            
             const catContainer = document.getElementById('home-categories');
             catContainer.innerHTML = '';
             
@@ -1751,8 +1837,8 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
                     cats.forEach(c => filterSelect.innerHTML += `<option value="${c.id}">${currentLang === 'ar' ? c.name_ar : c.name_en}</option>`);
                 }
 
-                // عرض 4 أقسام فقط في الرئيسية
-                cats.slice(0, 4).forEach(c => {
+                // عرض 8 أقسام في الرئيسية
+                cats.slice(0, 8).forEach(c => {
                     const icon = c.icon || 'fas fa-folder';
                     const name = currentLang === 'ar' ? c.name_ar : c.name_en;
                     const isPinned = c.is_pinned ? 'pinned' : '';
@@ -1808,25 +1894,115 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
         }
 
         function filterByCategory(catId) {
+            // إذا اختار "تصفح الأقسام" من القائمة المنسدلة (بدون قسم)
+            if(!catId) {
+                resetHomeView();
+                return;
+            }
+
+            // العودة للرئيسية لو كنا في شاشة جميع الأقسام
+            if(document.getElementById('sec-all-cats')) document.getElementById('sec-all-cats').classList.add('hidden');
+            document.getElementById('sec-home').classList.remove('hidden');
+            
             document.getElementById('global-search').value = '';
+            
+            // تحديث القائمة المنسدلة لتطابق القسم المحدد (لو ضغطنا من الكروت)
+            const filterSelect = document.getElementById('filter-category');
+            if(filterSelect) filterSelect.value = catId;
+
             document.getElementById('home-default-content').classList.add('hidden'); 
             document.getElementById('search-results-section').classList.remove('hidden'); 
             
-            let filtered = problemsCache.filter(p => p.category_id === catId && (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active'));
+            // تحويل كلا القيمتين إلى نصوص لضمان التطابق الدقيق بنسبة 100%
+            let filtered = problemsCache.filter(p => String(p.category_id) === String(catId) && (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active'));
+            
             renderProblems(filtered);
             
+            // إضافة زر العودة (الآن سيظهر دائماً وبشكل صحيح لأن الدالة السابقة أصبحت سريعة)
             const container = document.getElementById('problems-container');
-            container.insertAdjacentHTML('afterbegin', `<button class="btn btn-primary" style="grid-column: 1/-1; margin-bottom: 15px; width: fit-content;" onclick="resetHomeView()"><i class="fas fa-arrow-right"></i> عودة للأقسام</button>`);
+            container.insertAdjacentHTML('afterbegin', `<button class="btn btn-primary" style="grid-column: 1/-1; margin-bottom: 15px; width: fit-content;" onclick="resetHomeView(); document.getElementById('filter-category').value='';"><i class="fas fa-arrow-right"></i> عودة للأقسام</button>`);
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // ==========================================
+        // 🌟 ADVANCED SMART SEARCH ENGINE (المحرك الذكي)
+        // ==========================================
+        
+        // 1. قاموس المرادفات (Synonyms Dictionary)
+        const searchSynonyms = {
+            "بطاقه": ["تاج", "tag", "ستيكر", "استيكر", "لزقه", "شريحه", "كارت", "ملصق", "sticker", "card"],
+            "تعبئه": ["شحن", "رصيد", "فلوس", "دراهم", "مبلغ", "recharge", "topup", "دفع", "اضافه"],
+            "مركبه": ["سياره", "موتر", "car", "vehicle", "عربيه"],
+            "مخالفه": ["غرامه", "violation", "fine", "مخالفات", "مخالفة"],
+            "تفعيل": ["تشغيل", "فتح", "activate", "activation", "تسجيل", "انشاء"],
+            "حساب": ["بروفايل", "account", "ملف", "رقم حساب"],
+            "بوابه": ["بوابات", "gate", "toll", "عبور", "مرور"]
+        };
+
+        // 2. فلتر تنظيف النصوص (Text Normalizer)
+        // وظيفته توحيد الهمزات والتاء المربوطة وإزالة المسافات من الأرقام مثل 800-9090
+        function normalizeText(text) {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/[أإآ]/g, 'ا') // توحيد الهمزات
+                .replace(/ة/g, 'ه')     // تحويل التاء المربوطة لهاء
+                .replace(/ى/g, 'ي')     // توحيد الياء
+                .replace(/[-_]/g, '')   // إزالة الفواصل والشرطات لتوحيد الأرقام
+                .trim();
+        }
+
+        // 3. خوارزمية التقييم الذكية (Scoring Algorithm)
+        function calculateSearchScore(problem, queryTerms) {
+            let score = 0;
+            let normTitle = normalizeText(problem.title || '');
+            let normSub = normalizeText(problem.sub_procedure || '');
+            let normContent = normalizeText(problem.content || '');
+
+            let allTermsMatched = true; // يجب أن يحتوي الموضوع على كل كلمات البحث أو مرادفاتها
+
+            for (let term of queryTerms) {
+                if(!term) continue;
+                
+                // جلب المرادفات لهذه الكلمة
+                let termExpanded = [term];
+                for (let coreWord in searchSynonyms) {
+                    if (coreWord === term || searchSynonyms[coreWord].includes(term)) {
+                        termExpanded.push(coreWord, ...searchSynonyms[coreWord]);
+                    }
+                }
+
+                let termMatched = false;
+                
+                // البحث عن الكلمة أو أي من مرادفاتها في الموضوع وإعطاء النقاط
+                for (let expWord of termExpanded) {
+                    // وزن النقاط (العنوان أهم من الإجراء الفرعي، والأخير أهم من المحتوى)
+                    if (normTitle.includes(expWord)) { score += 50; termMatched = true; }
+                    else if (normSub.includes(expWord)) { score += 30; termMatched = true; }
+                    else if (normContent.includes(expWord)) { score += 5; termMatched = true; }
+                }
+
+                // إذا لم نجد الكلمة ولا مرادفاتها في الموضوع، إذن هذا الموضوع لا يطابق البحث
+                if (!termMatched) {
+                    allTermsMatched = false;
+                    break;
+                }
+            }
+
+            if (!allTermsMatched) return 0; // استبعاد الموضوع فوراً
+
+            // بونص إضافي للمواضيع الأكثر مشاهدة (الترند يصعد للأعلى)
+            let viewsBonus = 1 + ((problem.views || 0) * 0.02);
+            return score * viewsBonus;
+        }
+
+        // 4. الدالة الرئيسية للبحث (المربوطة بمربع البحث)
         function searchGlobal() {
-            const query = document.getElementById('global-search').value.trim().toLowerCase();
+            const rawQuery = document.getElementById('global-search').value.trim();
             const resultsSection = document.getElementById('search-results-section');
             const defaultContent = document.getElementById('home-default-content');
             
-            if(query === '') {
+            if(rawQuery === '') {
                 resultsSection.classList.add('hidden');
                 defaultContent.classList.remove('hidden'); 
                 return;
@@ -1835,16 +2011,21 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
             resultsSection.classList.remove('hidden');
             defaultContent.classList.add('hidden'); 
             
-            let filtered = problemsCache.filter(p => {
+            // تقطيع جملة البحث إلى كلمات منفصلة وتنظيفها
+            const queryTerms = normalizeText(rawQuery).split(/\s+/);
+            
+            // حساب نقاط كل موضوع
+            let scoredProblems = problemsCache.map(p => {
                 const isActive = (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active');
-                if(!isActive) return false;
+                if(!isActive) return { ...p, _score: 0 };
                 
-                const titleStr = (p.title || '').toLowerCase();
-                const subStr = (p.sub_procedure || '').toLowerCase();
-                const contentStr = (p.content || '').toLowerCase();
-                return titleStr.includes(query) || subStr.includes(query) || contentStr.includes(query);
-            });
-            renderProblems(filtered);
+                return { ...p, _score: calculateSearchScore(p, queryTerms) };
+            }).filter(p => p._score > 0); // الاحتفاظ فقط بالمواضيع التي سجلت نقاطاً
+            
+            // ترتيب المواضيع من الأعلى نقاطاً إلى الأقل (الأكثر صلة يظهر أولاً)
+            scoredProblems.sort((a, b) => b._score - a._score);
+            
+            renderProblems(scoredProblems);
         }
 
         function viewProblemById(id) {
