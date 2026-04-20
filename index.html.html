@@ -282,6 +282,38 @@
             display: block;
         }
 		
+		/* 1. إجبار المواضيع على استخدام خط الموقع الموحد */
+        #view-content * {
+            font-family: var(--font-ar), var(--font-en) !important;
+        }
+
+        /* 2. تصميم الشات (WhatsApp Web Clone) */
+        .chat-layout { display: flex; height: calc(100vh - 120px); background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); }
+        .chat-sidebar { width: 300px; background: #ffffff; border-left: 1px solid #e1e8ed; display: flex; flex-direction: column; }
+        .chat-header { background: #f0f2f5; padding: 15px; font-weight: bold; color: #111b21; border-bottom: 1px solid #e1e8ed; }
+        .contact-list { flex: 1; overflow-y: auto; }
+        .contact-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .contact-item:hover, .contact-item.active { background: #f0f2f5; }
+        .contact-avatar { width: 45px; height: 45px; border-radius: 50%; background: #dfe5e7; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: #54656f; }
+        .contact-name { font-weight: bold; color: #111b21; font-size: 1rem; }
+        
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #efeae2; position: relative; }
+        .chat-main::before { content: ""; position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.06; pointer-events:none; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1; }
+        .bubble { max-width: 65%; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; position: relative; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); }
+        .bubble.sent { align-self: flex-start; background: #dcf8c6; border-top-left-radius: 0; }
+        .bubble.received { align-self: flex-end; background: #ffffff; border-top-right-radius: 0; }
+        .bubble-time { font-size: 0.7rem; color: #667781; text-align: left; margin-top: 5px; display: block; }
+        .chat-input-area { background: #f0f2f5; padding: 10px 20px; display: flex; align-items: center; gap: 15px; z-index: 1; }
+        .chat-input { flex: 1; padding: 12px; border-radius: 8px; border: none; outline: none; font-size: 1rem; font-family: inherit; }
+        .chat-send-btn { background: transparent; border: none; color: #54656f; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .chat-send-btn:hover { color: var(--primary); }
+
+        /* 3. تذاكر الدعم */
+        .ticket-card { background: white; border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .ticket-status.open { color: #f59e0b; background: #fef3c7; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; width: fit-content; }
+        .ticket-status.closed { color: var(--success); background: #d1fae5; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; width: fit-content; }
+		
 	</style>
 	
 	
@@ -311,6 +343,12 @@
         </div>
 		<div class="nav-item" id="nav-all-cats" onclick="showSection('all-cats', this); loadAllCategories();">
             <i class="fas fa-th-list"></i> <span>جميع الأقسام</span>
+        </div>
+		<div class="nav-item hidden" id="nav-chat" onclick="showSection('chat', this); initChat();">
+            <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> <span>الشات والتواصل</span>
+        </div>
+        <div class="nav-item hidden" id="nav-tickets" onclick="showSection('tickets', this); loadTickets();">
+            <i class="fas fa-ticket-alt"></i> <span>التذاكر والدعم</span>
         </div>
         <div class="nav-item" onclick="showSection('notes', this)">
             <i class="fas fa-book"></i> <span class="txt-notes">ملاحظاتي الدائمة</span>
@@ -546,6 +584,43 @@
             <div class="section-title"><i class="fas fa-th-list" style="color: var(--primary);"></i> جميع الأقسام</div>
             <div class="bento-categories" id="all-categories-container"></div>
         </section>
+		<section id="sec-chat" class="hidden">
+            <div class="chat-layout">
+                <div class="chat-sidebar">
+                    <div class="chat-header"><i class="fas fa-comments"></i> المحادثات والمجموعات</div>
+                    <div class="contact-list" id="chat-contacts">
+                        </div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-header" id="chat-active-name" style="background: #f0f2f5;">اختر محادثة للبدء...</div>
+                    <div class="chat-messages" id="chat-messages">
+                        </div>
+                    <div class="chat-input-area hidden" id="chat-input-container">
+                        <button class="chat-send-btn" title="إدراج إيموجي" onclick="alert('لإدراج إيموجي: اضغط من الكيبورد على الزر (Windows + نقطة) في الويندوز، أو (Cmd + Ctrl + Space) في الماك.')">😀</button>
+                        <input type="text" id="chat-input-msg" class="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                        <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-tickets" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: var(--primary);"><i class="fas fa-ticket-alt"></i> نظام الدعم والتصعيد</h2>
+                <button class="btn btn-danger" onclick="openModal('modal-ticket')"><i class="fas fa-exclamation-triangle"></i> تصعيد مشكلة جديدة</button>
+            </div>
+            
+            <div id="tickets-container" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                </div>
+            
+            <div id="admin-search-gaps" class="hidden" style="margin-top: 40px; background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                <h3 style="color: var(--danger); margin-bottom: 15px;"><i class="fas fa-search-minus"></i> تحليلات فجوة البحث (ما لم يجده الوكلاء)</h3>
+                <table style="width: 100%; text-align: right; border-collapse: collapse;">
+                    <thead><tr style="border-bottom: 2px solid #eee;"><th>كلمة البحث</th><th>عدد المرات</th><th>آخر محاولة</th></tr></thead>
+                    <tbody id="gaps-table-body"></tbody>
+                </table>
+            </div>
+        </section>
 <section id="sec-honor" class="hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <h2 style="color: #f59e0b; font-size: 2rem;"><i class="fas fa-trophy"></i> لوحة الشرف والتقدير</h2>
@@ -741,6 +816,10 @@
                     </div>
             </div>
             
+			<div style="margin-top: 20px; text-align: left;">
+                <button class="btn" style="background: #128c7e; color: white;" onclick="openShareModal()"><i class="fas fa-share-alt"></i> مشاركة في الشات</button>
+            </div>
+			
             <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px;" id="admin-actions" class="hidden">
                 <button class="btn btn-success hidden" id="btn-approve" onclick="approveCurrentProblem()"><i class="fas fa-check"></i> موافقة ونشر</button>
                 <button class="btn btn-primary" id="btn-edit" onclick="editCurrentProblem()"><i class="fas fa-edit"></i> تعديل</button>
@@ -798,6 +877,32 @@
             </div>
             
             <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="saveHonorEntry()"><i class="fas fa-save"></i> حفظ التكريم</button>
+        </div>
+    </div>
+	
+	<div class="modal-overlay" id="modal-ticket" style="z-index: 10020;">
+        <div class="modal modal-sm glass">
+            <i class="fas fa-times close-modal" onclick="closeModal('modal-ticket')"></i>
+            <h2 style="margin-bottom: 20px; color: var(--danger);">رفع تذكرة دعم/تصعيد</h2>
+            <div class="form-group">
+                <label>وصف المشكلة بالتفصيل</label>
+                <textarea id="ticket-desc" class="form-control" style="height: 120px; resize: vertical;" placeholder="اكتب مشكلة العميل التي لم تجد لها حلاً..."></textarea>
+            </div>
+            <button class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="submitTicket()"><i class="fas fa-paper-plane"></i> إرسال للإدارة</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-share" style="z-index: 10025;">
+        <div class="modal modal-sm glass">
+            <i class="fas fa-times close-modal" onclick="closeModal('modal-share')"></i>
+            <h2 style="margin-bottom: 20px; color: var(--primary);">مشاركة الموضوع في الشات</h2>
+            <input type="hidden" id="share-prob-title">
+            <div class="form-group">
+                <label>اختر الوكيل أو المجموعة</label>
+                <select id="share-target" class="form-control">
+                    </select>
+            </div>
+            <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="executeShare()"><i class="fab fa-whatsapp"></i> إرسال الرابط</button>
         </div>
     </div>
 
@@ -906,10 +1011,15 @@
             document.getElementById('sec-home').classList.add('hidden');
             document.getElementById('sec-notes').classList.add('hidden');
             document.getElementById('sec-dashboard').classList.add('hidden'); 
-            document.getElementById('sec-users').classList.add('hidden'); // السطر اللي كان ناقص!
+            document.getElementById('sec-users').classList.add('hidden'); 
             document.getElementById('sec-audit').classList.add('hidden');
-			document.getElementById('sec-honor').classList.add('hidden');
-			if(document.getElementById('sec-all-cats')) document.getElementById('sec-all-cats').classList.add('hidden');
+            document.getElementById('sec-honor').classList.add('hidden');
+            if(document.getElementById('sec-all-cats')) document.getElementById('sec-all-cats').classList.add('hidden');
+            
+            // إخفاء الشاشات الجديدة (تم تصحيح مكانهم هنا)
+            if(document.getElementById('sec-chat')) document.getElementById('sec-chat').classList.add('hidden');
+            if(document.getElementById('sec-tickets')) document.getElementById('sec-tickets').classList.add('hidden');
+
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             // إظهار القسم المطلوب فقط
@@ -1012,6 +1122,8 @@ function authModeTextUpdate() {
             document.getElementById('btn-login-nav').style.display = 'none';
             document.getElementById('btn-logout').style.display = 'flex';
             document.getElementById('btn-change-pass').classList.remove('hidden');
+			document.getElementById('nav-chat').classList.remove('hidden');
+            document.getElementById('nav-tickets').classList.remove('hidden');
             
             if(currentUser.role === 'admin' || currentUser.role === 'moderator') {
                 document.getElementById('btn-add-problem').classList.remove('hidden');
@@ -1026,6 +1138,8 @@ function authModeTextUpdate() {
             updateUserDisplay();
 			logAction('دخول', 'النظام', 'تم تسجيل الدخول بنجاح');
         }
+		
+		
 
         function logout() {
             currentUser = null;
@@ -1037,6 +1151,8 @@ function authModeTextUpdate() {
 			document.getElementById('nav-audit').classList.add('hidden');
 			document.getElementById('btn-add-honor').classList.add('hidden');
             document.getElementById('permanent-notes').value = '';
+			document.getElementById('nav-chat').classList.add('hidden');
+            document.getElementById('nav-tickets').classList.add('hidden');
             showSection('home', document.querySelectorAll('.nav-item')[1]);
             updateUserDisplay();
         }
@@ -1060,27 +1176,38 @@ function authModeTextUpdate() {
         // 🛡️ SECURITY & ANTI-SNOOPING (حماية الكود)
         // ==========================================
         
-        // منع الزر الأيمن للماوس (باستثناء المدير والأدمن)
-        document.addEventListener('contextmenu', function(e) {
-            if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return; // السماح للمدراء
-            e.preventDefault();
-        });
-
-        // منع اختصارات لوحة المفاتيح (باستثناء المدير والأدمن)
-        document.onkeydown = function(e) {
-            if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return true; // السماح للمدراء
-
-            if (
-                e.key === 'F12' || 
-                (e.ctrlKey && (e.key === 'u' || e.key === 'U')) || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I')) || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'j' || e.key === 'J')) || 
-                (e.ctrlKey && (e.key === 's' || e.key === 'S'))
-            ) {
+        function applyStrictSecurity() {
+            // 1. حظر الزر الأيمن تماماً
+            window.addEventListener('contextmenu', function(e) {
+                if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return;
                 e.preventDefault();
-                return false;
-            }
-        };
+            }, { capture: true });
+
+            // 2. حظر جميع اختصارات لوحة المفاتيح
+            window.addEventListener('keydown', function(e) {
+                if (currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) return;
+
+                // قائمة الاختصارات المحظورة
+                const forbiddenKeys = [
+                    e.key === 'F12',
+                    e.keyCode === 123,
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')),
+                    (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')),
+                    (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')),
+                    (e.ctrlKey && (e.key === 'U' || e.key === 'u')),
+                    (e.ctrlKey && (e.key === 'S' || e.key === 's')),
+                    (e.ctrlKey && (e.key === 'P' || e.key === 'p'))
+                ];
+
+                if (forbiddenKeys.some(condition => condition)) {
+                    e.preventDefault();
+                    e.stopPropagation(); // منع الحدث من الوصول للمتصفح
+                    return false;
+                }
+            }, { capture: true }); // capture: true تعني (اقبض على الحدث قبل المتصفح نفسه)
+        }
+        
+        applyStrictSecurity(); // تشغيل الحماية فوراً
 		
 		
         // ==========================================
@@ -1361,12 +1488,22 @@ function authModeTextUpdate() {
                 const { data, error } = await supabase.from('kb_problems').select('*').eq('lang', currentLang).order('updated_at', { ascending: false });
                 if(error) throw error;
                 problemsCache = data;
-                renderProblems(data);
+                
+                // الذكاء الجديد: بعد جلب البيانات، نتأكد أين يقف المستخدم حالياً لنقوم بتحديث نفس شاشته فقط!
+                const searchInput = document.getElementById('global-search');
+                const filterSelect = document.getElementById('filter-category');
+                
+                if (searchInput && searchInput.value.trim() !== '') {
+                    searchGlobal(); // لو كان يبحث، حدث نتائج البحث
+                } else if (filterSelect && filterSelect.value !== '') {
+                    filterByCategory(filterSelect.value); // لو كان داخل قسم، حدث هذا القسم فقط
+                }
+                // لو كان في الصفحة الرئيسية، لا نفعل شيئاً (البيانات محفوظة في الخلفية بأمان)
+                
             } catch(e) {
                 // Fallback
                 let probs = JSON.parse(localStorage.getItem('local_problems') || '[]');
                 problemsCache = probs.filter(p => p.lang === currentLang).sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
-                renderProblems(problemsCache);
             }
         }
 
@@ -1460,6 +1597,7 @@ function renderProblems(problems) {
                 loadCallNotes(prob.id);
             }
         } 
+		
 		
 			
         async function approveCurrentProblem() {
@@ -2001,7 +2139,17 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
             const rawQuery = document.getElementById('global-search').value.trim();
             const resultsSection = document.getElementById('search-results-section');
             const defaultContent = document.getElementById('home-default-content');
-            
+            if(scoredProblems.length === 0) {
+                const container = document.getElementById('problems-container');
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align:center; padding: 30px;">
+                        <h3 style="color: var(--danger); margin-bottom: 10px;">لا توجد نتائج مطابقة!</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">لم نعثر على نتيجة لـ "${rawQuery}". هل تريد تصعيد هذه المشكلة للإدارة لإضافتها؟</p>
+                        <button class="btn btn-danger" onclick="openModal('modal-ticket'); document.getElementById('ticket-desc').value = 'لم أتمكن من العثور على حل بخصوص: ${rawQuery}';"><i class="fas fa-ticket-alt"></i> تصعيد المشكلة</button>
+                    </div>`;
+                logSearchGap(rawQuery); // تسجيل الكلمة المفقودة للإدارة
+                return;
+            }
             if(rawQuery === '') {
                 resultsSection.classList.add('hidden');
                 defaultContent.classList.remove('hidden'); 
@@ -2423,6 +2571,256 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
                 panel.style.display = 'none';
             }
         });
+		
+		// ==========================================
+        // 12. ESCALATION & TICKETS (التذاكر والتصعيد)
+        // ==========================================
+        async function logSearchGap(query) {
+            try {
+                // محاولة تحديث العداد إن وجدت، أو إضافتها كجديدة
+                const { data } = await supabase.from('search_gaps').select('*').eq('query', query);
+                if(data && data.length > 0) {
+                    await supabase.from('search_gaps').update({ search_count: data[0].search_count + 1, last_searched: new Date().toISOString() }).eq('query', query);
+                } else {
+                    await supabase.from('search_gaps').insert([{ query: query }]);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function submitTicket() {
+            const desc = document.getElementById('ticket-desc').value.trim();
+            if(!desc) return alert("يرجى كتابة المشكلة!");
+            if(!currentUser) return alert("يرجى تسجيل الدخول أولاً.");
+            
+            await supabase.from('tickets').insert([{ username: currentUser.username, description: desc }]);
+            alert("تم إرسال التذكرة بنجاح! سيقوم الدعم بالرد عليك قريباً.");
+            closeModal('modal-ticket');
+            loadTickets();
+        }
+
+        async function loadTickets() {
+            if(!currentUser) return;
+            const container = document.getElementById('tickets-container');
+            container.innerHTML = '<div class="loader" style="margin: 20px auto;"></div>';
+            
+            // المدير يرى كل التذاكر، الوكيل يرى تذاكره فقط
+            let query = supabase.from('tickets').select('*').order('created_at', { ascending: false });
+            if(currentUser.role !== 'moderator' && currentUser.role !== 'admin') {
+                query = query.eq('username', currentUser.username);
+            }
+            
+            const { data: tickets } = await query;
+            container.innerHTML = '';
+            
+            if(!tickets || tickets.length === 0) {
+                container.innerHTML = '<p style="text-align:center;">لا توجد تذاكر مسجلة.</p>';
+            } else {
+                tickets.forEach(t => {
+                    const statusHtml = t.status === 'open' ? '<div class="ticket-status open">قيد المراجعة</div>' : '<div class="ticket-status closed">تم الحل</div>';
+                    let adminReplyBox = '';
+                    
+                    if(currentUser.role === 'moderator' && t.status === 'open') {
+                        adminReplyBox = `
+                            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                                <input type="text" id="reply-${t.id}" class="form-control" placeholder="اكتب ردك وملاحظاتك هنا...">
+                                <button class="btn btn-success" onclick="closeTicket('${t.id}')">إرسال الرد وإغلاق</button>
+                            </div>
+                        `;
+                    }
+
+                    const responseHtml = t.response ? `<div style="background:#f8fafc; padding:10px; border-radius:8px; border-right: 4px solid var(--success); margin-top:10px;"><strong style="color:var(--success);">رد الإدارة:</strong> ${t.response}</div>` : '';
+
+                    container.innerHTML += `
+                        <div class="ticket-card">
+                            <div style="display:flex; justify-content:space-between;">
+                                <strong><i class="fas fa-user"></i> ${t.username}</strong>
+                                ${statusHtml}
+                            </div>
+                            <p style="color: var(--text-dark);">${t.description}</p>
+                            <span style="font-size:0.8rem; color:var(--text-muted);">${new Date(t.created_at).toLocaleString('ar-EG')}</span>
+                            ${responseHtml}
+                            ${adminReplyBox}
+                        </div>
+                    `;
+                });
+            }
+
+            // تحميل فجوة البحث للمدراء
+            if(currentUser.role === 'moderator') {
+                document.getElementById('admin-search-gaps').classList.remove('hidden');
+                const { data: gaps } = await supabase.from('search_gaps').select('*').order('search_count', { ascending: false }).limit(10);
+                const tbody = document.getElementById('gaps-table-body');
+                tbody.innerHTML = '';
+                if(gaps) {
+                    gaps.forEach(g => {
+                        tbody.innerHTML += `<tr><td style="padding:10px;">${g.query}</td><td style="padding:10px; font-weight:bold; color:var(--danger);">${g.search_count}</td><td style="padding:10px; color:var(--text-muted);">${new Date(g.last_searched).toLocaleDateString()}</td></tr>`;
+                    });
+                }
+            }
+        }
+
+        async function closeTicket(id) {
+            const reply = document.getElementById(`reply-${id}`).value.trim();
+            if(!reply) return alert("يرجى كتابة الرد!");
+            await supabase.from('tickets').update({ status: 'closed', response: reply }).eq('id', id);
+            loadTickets();
+        }
+
+        // ==========================================
+        // 13. WHATSAPP CLONE (الشات الداخلي)
+        // ==========================================
+        let activeChatReceiver = null;
+        let chatRealtimeInterval = null;
+
+        async function initChat() {
+            if(!currentUser) return;
+            const contactList = document.getElementById('chat-contacts');
+            contactList.innerHTML = '';
+
+            // 1. إضافة مجموعة التعميمات (Channel)
+            contactList.innerHTML += `
+                <div class="contact-item" onclick="openChat('channel_general', '📢 مجموعة التعميمات والإعلانات')">
+                    <div class="contact-avatar" style="background:#d1fae5; color:#059669;"><i class="fas fa-bullhorn"></i></div>
+                    <div class="contact-name">📢 التعميمات (الجميع)</div>
+                </div>
+            `;
+
+            // 2. جلب جميع الوكلاء من الداتا بيس
+            const { data: users } = await supabase.from('app_users').select('username').neq('username', currentUser.username);
+            if(users) {
+                users.forEach(u => {
+                    contactList.innerHTML += `
+                        <div class="contact-item" onclick="openChat('${u.username}', '${u.username}')">
+                            <div class="contact-avatar"><i class="fas fa-user"></i></div>
+                            <div class="contact-name">${u.username}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            // الاستماع الحي للرسائل الجديدة (Realtime)
+            if(!chatRealtimeInterval) {
+                supabase.channel('chat_room')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
+                    const msg = payload.new;
+                    // إذا كانت الرسالة لي، أو للمجموعة، أو مرسلة مني
+                    if(msg.receiver === currentUser.username || msg.receiver === 'channel_general' || msg.sender === currentUser.username) {
+                        // وإذا كنت فاتح نفس المحادثة الآن، ارسمها فوراً!
+                        if(activeChatReceiver === msg.receiver || (msg.receiver === currentUser.username && activeChatReceiver === msg.sender)) {
+                            appendMessageUI(msg);
+                            scrollToChatBottom();
+                        } else {
+                            // تنبيه بسيط
+                            document.getElementById('nav-chat').style.color = 'var(--danger)'; // لفت الانتباه
+                        }
+                    }
+                }).subscribe();
+                chatRealtimeInterval = true;
+            }
+        }
+
+        async function openChat(receiverId, displayName) {
+            activeChatReceiver = receiverId;
+            document.getElementById('nav-chat').style.color = ''; // مسح التنبيه
+            document.getElementById('chat-active-name').innerHTML = `<strong>${displayName}</strong>`;
+            
+            // إظهار مربع الكتابة (إلا إذا كانت مجموعة التعميمات وأنت لست مدير)
+            const inputContainer = document.getElementById('chat-input-container');
+            if(receiverId === 'channel_general' && currentUser.role !== 'moderator') {
+                inputContainer.classList.add('hidden');
+            } else {
+                inputContainer.classList.remove('hidden');
+            }
+
+            loadChatMessages();
+        }
+
+        async function loadChatMessages() {
+            if(!activeChatReceiver) return;
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.innerHTML = '<div style="text-align:center; color:#54656f; margin-top:50px;">جاري تحميل المحادثة...</div>';
+
+            let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+            
+            if(activeChatReceiver === 'channel_general') {
+                query = query.eq('receiver', 'channel_general');
+            } else {
+                // جلب المحادثة بيني وبين الطرف الآخر
+                query = query.or(`and(sender.eq.${currentUser.username},receiver.eq.${activeChatReceiver}),and(sender.eq.${activeChatReceiver},receiver.eq.${currentUser.username})`);
+            }
+
+            const { data: msgs } = await query;
+            msgContainer.innerHTML = '';
+            
+            if(msgs) {
+                msgs.forEach(m => appendMessageUI(m));
+                scrollToChatBottom();
+            }
+        }
+
+        function appendMessageUI(msg) {
+            const msgContainer = document.getElementById('chat-messages');
+            const isMe = msg.sender === currentUser.username;
+            const bubbleClass = isMe ? 'sent' : 'received';
+            const timeStr = new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
+            
+            // إظهار اسم المرسل في المجموعة
+            const senderNameHtml = (!isMe && msg.receiver === 'channel_general') ? `<strong style="font-size:0.8rem; color:#0284c7; display:block; margin-bottom:3px;">${msg.sender}</strong>` : '';
+            
+            // تحويل الروابط (روابط المواضيع) لتصبح قابلة للضغط
+            let formattedMsg = msg.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#0284c7; text-decoration:underline;">$1</a>');
+
+            msgContainer.innerHTML += `
+                <div class="bubble ${bubbleClass}">
+                    ${senderNameHtml}
+                    ${formattedMsg}
+                    <span class="bubble-time">${timeStr}</span>
+                </div>
+            `;
+        }
+
+        function scrollToChatBottom() {
+            const box = document.getElementById('chat-messages');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input-msg');
+            const text = input.value.trim();
+            if(!text || !activeChatReceiver) return;
+
+            input.value = ''; // تفريغ الخانة فوراً لسرعة الإرسال
+            await supabase.from('chat_messages').insert([{ sender: currentUser.username, receiver: activeChatReceiver, message: text }]);
+            // الرسالة ستُرسم أوتوماتيكياً بفضل الـ Realtime!
+        }
+
+        // ==========================================
+        // 14. SHARE TOPIC TO CHAT (مشاركة الموضوع)
+        // ==========================================
+        async function openShareModal() {
+            if(!currentlyViewingProb) return;
+            document.getElementById('share-prob-title').value = currentlyViewingProb.title;
+            
+            const select = document.getElementById('share-target');
+            select.innerHTML = '<option value="channel_general">📢 مجموعة التعميمات (الجميع)</option>';
+            
+            const { data: users } = await supabase.from('app_users').select('username').neq('username', currentUser.username);
+            if(users) {
+                users.forEach(u => select.innerHTML += `<option value="${u.username}">👤 ${u.username}</option>`);
+            }
+            openModal('modal-share');
+        }
+
+        async function executeShare() {
+            const target = document.getElementById('share-target').value;
+            const title = document.getElementById('share-prob-title').value;
+            // ننشئ رابط وهمي يخبر الموظف أن يبحث عن هذا العنوان
+            const shareText = `📌 أشارك معك موضوع هام من قاعدة المعرفة:\n[ ${title} ]\n👉 يرجى البحث عنه في النظام لقراءته.`;
+
+            await supabase.from('chat_messages').insert([{ sender: currentUser.username, receiver: target, message: shareText }]);
+            alert("تم إرسال الموضوع في الشات بنجاح!");
+            closeModal('modal-share');
+        }
 		
         // Initialize App
         fetchProblems();
