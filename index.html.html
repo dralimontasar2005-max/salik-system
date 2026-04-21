@@ -344,15 +344,17 @@
             align-items: flex-start;
             justify-content: center;
             width: 100%;
-            max-width: 1400px; /* مساحة أوسع لتشمل الفهرس والموضوع */
-            height: 95vh; /* أقصى ارتفاع مسموح للشاشة */
+            max-width: 1400px; 
+            max-height: 95vh; /* يسمح للنافذة بالتقلص إذا كان الموضوع صغيراً */
             padding: 0 15px;
         }
         
         .modal-flex-wrapper .modal {
-            margin: 0; /* إلغاء التوسيط القديم ليأخذ مكانه بجوار الفهرس */
-            height: 100%; /* تفعيل السكرول الداخلي للموضوع */
-            flex: 1; /* يأخذ باقي المساحة المتاحة للنافذة */
+            margin: 0; 
+            height: auto; /* الطول ديناميكي على حسب الكلام */
+            max-height: 95vh; /* أقصى طول مسموح بعدها يظهر السكرول */
+            overflow-y: auto;
+            flex: 1; 
         }
 
         .toc-container { 
@@ -1130,7 +1132,10 @@
         window.addEventListener('click', function(event) {
             // إذا كان العنصر الذي تم الضغط عليه هو الخلفية المظللة
             if (event.target.classList.contains('modal-overlay')) {
-                event.target.style.display = 'none';
+                // منع الإغلاق التلقائي لنافذة "إضافة/تعديل موضوع" لحماية ما تم كتابته
+                if (event.target.id !== 'modal-problem') {
+                    event.target.style.display = 'none';
+                }
             }
         });
 
