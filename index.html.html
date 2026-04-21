@@ -152,7 +152,10 @@
         /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0, 0, 0, 0.4); /* تخفيف السواد قليلاً ليظهر التأثير بشكل أجمل */
+            backdrop-filter: blur(4px); /* تأثير الـ Blur الخفيف */
+            -webkit-backdrop-filter: blur(4px); /* لدعم متصفحات سفاري */
+            display: none; justify-content: center; align-items: center; z-index: 1000;
         }
         .modal {
             width: 90%; max-width: 800px; padding: 24px; max-height: 90vh; overflow-y: auto; position: relative;
@@ -169,8 +172,28 @@
             display: flex;
             flex-direction: column;
         }
-        .close-modal { position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 1.5rem; color: var(--text-muted); }
-        html[dir="ltr"] .close-modal { right: auto; left: 20px; }
+        .close-modal { 
+            position: sticky; 
+            top: 10px; 
+            float: left; /* يذهب لليسار في الواجهة العربية */
+            margin-bottom: -40px; /* حتى لا يدفع العنوان للأسفل */
+            cursor: pointer; 
+            font-size: 1.5rem; 
+            color: var(--danger); /* لون أحمر ليدل على الإغلاق */
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            border-radius: 50%; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: 0.2s;
+        }
+        .close-modal:hover { transform: scale(1.1); background: #fee2e2; }
+        html[dir="ltr"] .close-modal { float: right; } /* يذهب لليمين في الواجهة الإنجليزية */
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
@@ -313,6 +336,54 @@
         .ticket-card { background: white; border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
         .ticket-status.open { color: #f59e0b; background: #fef3c7; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; width: fit-content; }
         .ticket-status.closed { color: var(--success); background: #d1fae5; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; width: fit-content; }
+	
+/* تنسيقات الفهرس الجانبي الخارجي (Table of Contents) */
+        .modal-flex-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+            max-width: 1400px; /* مساحة أوسع لتشمل الفهرس والموضوع */
+            height: 95vh; /* أقصى ارتفاع مسموح للشاشة */
+            padding: 0 15px;
+        }
+        
+        .modal-flex-wrapper .modal {
+            margin: 0; /* إلغاء التوسيط القديم ليأخذ مكانه بجوار الفهرس */
+            height: 100%; /* تفعيل السكرول الداخلي للموضوع */
+            flex: 1; /* يأخذ باقي المساحة المتاحة للنافذة */
+        }
+
+        .toc-container { 
+            width: 280px; /* عرض مناسب للفهرس */
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(12px);
+            padding: 20px; 
+            border-radius: 16px; 
+            border: 1px solid var(--glass-border); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-height: 95vh; 
+            overflow-y: auto; 
+            display: none; /* مخفي افتراضياً ويظهر فقط لو فيه عناوين */
+            flex-shrink: 0; /* لمنع الفهرس من الانضغاط */
+            /* ميزة سحرية: الـ Flexbox سيضعه يميناً في العربي ويساراً في الإنجليزي تلقائياً! */
+        }
+        
+        .toc-title { font-weight: bold; color: var(--primary); margin-bottom: 10px; border-bottom: 2px solid var(--glass-border); padding-bottom: 5px; }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item { 
+            padding: 8px 0; cursor: pointer; color: var(--text-dark); transition: 0.2s; 
+            font-size: 0.95rem; border-bottom: 1px dashed #e2e8f0; font-weight: 600;
+        }
+        .toc-item:hover { color: var(--primary); padding-inline-start: 5px; }
+        
+        /* جعل الفهرس يظهر بشكل مرتب في شاشات الموبايل */
+        @media (max-width: 1000px) {
+            .modal-flex-wrapper { flex-direction: column; height: auto; max-height: 95vh; overflow-y: auto; align-items: center; }
+            .modal-flex-wrapper .modal { height: auto; overflow-y: visible; }
+            .toc-container { width: 100%; max-width: 800px; max-height: 300px; position: static; margin-bottom: 10px; }
+        }
 		
 	</style>
 	
@@ -724,6 +795,12 @@
                             <option value="6">ضخم</option>
                             <option value="7">عملاق</option>
                         </select>
+						<select onchange="execCmd('formatBlock', this.value)" title="تنسيق العناوين للفهرس">
+                            <option value="DIV">نص عادي</option>
+                            <option value="H2">عنوان رئيسي (H2)</option>
+                            <option value="H3">عنوان فرعي (H3)</option>
+                            <option value="H4">عنوان صغير (H4)</option>
+                        </select>
 
                         <select onchange="setLineHeight(this.value)" title="تباعد الأسطر">
                             <option value="1.2">تباعد 1.2</option>
@@ -803,30 +880,35 @@
 	
     <!-- View Problem Modal -->
     <div class="modal-overlay" id="modal-view">
-        <div class="modal" style="background: #ffffff; height: auto; width: 95%; max-width: 1100px;"> 
-            <i class="fas fa-times close-modal" onclick="closeModal('modal-view')"></i>
-            <h2 id="view-title" style="margin-bottom: 10px; color: var(--primary);"></h2>
-            <div id="view-date" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;"></div>
+        <div class="modal-flex-wrapper">
             
-            <div id="view-content" style="line-height: 1.8; font-size: 1.1rem; overflow-wrap: break-word; padding: 0 20px;"></div>
-			<div id="call-notes-container" class="hidden" style="margin-top: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--glass-border);">
-                <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fas fa-headset"></i> ملاحظات المكالمات (Call Notes)</span>
-                    <button class="btn btn-primary hidden" id="btn-add-call-note" onclick="openCallNoteModal()" style="padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-plus"></i> إضافة نوتة</button>
-                </h3>
-                <div id="call-notes-list" style="display: flex; flex-direction: column; gap: 10px;">
-                    </div>
+            <div class="toc-container" id="toc-container">
+                <div class="toc-title"><i class="fas fa-list-ul"></i> محتويات الدليل</div>
+                <ul class="toc-list" id="toc-list"></ul>
+            </div>
+
+            <div class="modal" style="background: #ffffff; width: 100%; max-width: 1100px;"> 
+                <i class="fas fa-times close-modal" onclick="closeModal('modal-view')"></i>
+                <h2 id="view-title" style="margin-bottom: 10px; color: var(--primary);"></h2>
+                <div id="view-date" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;"></div>
+                
+                <div id="view-content" style="line-height: 1.8; font-size: 1.1rem; overflow-wrap: break-word; padding: 0 20px;"></div>
+                    
+                <div id="call-notes-container" class="hidden" style="margin-top: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--glass-border);">
+                    <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fas fa-headset"></i> ملاحظات المكالمات (Call Notes)</span>
+                        <button class="btn btn-primary hidden" id="btn-add-call-note" onclick="openCallNoteModal()" style="padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-plus"></i> إضافة نوتة</button>
+                    </h3>
+                    <div id="call-notes-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+                
+                <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px;" id="admin-actions" class="hidden">
+                    <button class="btn btn-success hidden" id="btn-approve" onclick="approveCurrentProblem()"><i class="fas fa-check"></i> موافقة ونشر</button>
+                    <button class="btn btn-primary" id="btn-edit" onclick="editCurrentProblem()"><i class="fas fa-edit"></i> تعديل</button>
+                    <button class="btn btn-danger" id="btn-delete" onclick="deleteCurrentProblem()"><i class="fas fa-trash"></i> حذف</button>
+                </div>
             </div>
             
-			<div style="margin-top: 20px; text-align: left;">
-                <button class="btn" style="background: #128c7e; color: white;" onclick="openShareModal()"><i class="fas fa-share-alt"></i> مشاركة في الشات</button>
-            </div>
-			
-            <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px;" id="admin-actions" class="hidden">
-                <button class="btn btn-success hidden" id="btn-approve" onclick="approveCurrentProblem()"><i class="fas fa-check"></i> موافقة ونشر</button>
-                <button class="btn btn-primary" id="btn-edit" onclick="editCurrentProblem()"><i class="fas fa-edit"></i> تعديل</button>
-                <button class="btn btn-danger" id="btn-delete" onclick="deleteCurrentProblem()"><i class="fas fa-trash"></i> حذف</button>
-            </div>
         </div>
     </div>
 	
@@ -1044,6 +1126,13 @@
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+		// إغلاق النوافذ المنبثقة عند الضغط في أي مكان فارغ (خارج النافذة)
+        window.addEventListener('click', function(event) {
+            // إذا كان العنصر الذي تم الضغط عليه هو الخلفية المظللة
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = 'none';
+            }
+        });
 
         // ==========================================
         // 3. AUTHENTICATION (Admin / User)
@@ -1552,6 +1641,54 @@ function renderProblems(problems) {
                 container.appendChild(card);
             });
         }
+		
+		function generateTOC() {
+            const content = document.getElementById('view-content');
+            const tocContainer = document.getElementById('toc-container');
+            const tocList = document.getElementById('toc-list');
+            
+            tocList.innerHTML = ''; // تفريغ الفهرس القديم
+            
+            // البحث عن العناوين التي أضفتها من المحرر (H2, H3, H4)
+            const headings = content.querySelectorAll('h2, h3, h4');
+            
+            // إذا كان الموضوع قصيراً ولا يحتوي على عناوين، نخفي الفهرس تماماً
+            if (headings.length === 0) {
+                tocContainer.style.display = 'none';
+                return;
+            }
+            
+            tocContainer.style.display = 'block'; // إظهار الفهرس
+            
+            headings.forEach((heading, index) => {
+                // إعطاء ID فريد لكل عنوان داخل المقال حتى نتمكن من القفز إليه
+                const headingId = 'toc-heading-' + index;
+                heading.id = headingId;
+                
+                // إنشاء عنصر (سطر) في الفهرس
+                const li = document.createElement('li');
+                li.className = 'toc-item';
+                li.innerText = heading.innerText;
+                
+                // عمل مسافة بادئة للعناوين الفرعية لتكون كشجرة مرتبة
+                if (heading.tagName === 'H3') li.style.marginInlineStart = '15px';
+                if (heading.tagName === 'H4') li.style.marginInlineStart = '30px';
+                
+                // عند الضغط على العنوان في الفهرس
+                li.onclick = () => {
+                    // 1. النزول السلس للعنوان
+                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // 2. إعطاء وميض (هايلايت أصفر خفيف) للعنوان للفت انتباه الوكيل
+                    heading.style.transition = 'background-color 0.5s';
+                    heading.style.backgroundColor = '#fef08a';
+                    heading.style.borderRadius = '4px';
+                    setTimeout(() => { heading.style.backgroundColor = 'transparent'; }, 1500);
+                };
+                
+                tocList.appendChild(li);
+            });
+        }
 
         function viewProblem(prob) {
             if(!prob) return;
@@ -1583,6 +1720,8 @@ function renderProblems(problems) {
                 actionBlock.classList.add('hidden');
             }
             
+			generateTOC(); // توليد الفهرس الجانبي
+			
             openModal('modal-view'); 
 
             // 2. زيادة المشاهدات وتحديث الواجهة
@@ -2006,11 +2145,16 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
                 });
             }
 
-            // 2. جلب المشكلات الأكثر طلباً (أعلى 5 مشاهدات)
-            let query = supabase.from('kb_problems').select('*').eq('lang', currentLang);
-            if (!currentUser || currentUser.role === 'user') query = query.eq('status', 'active');
-            
-            const { data: topProbs } = await query.order('views', { ascending: false }).limit(5);
+            // 2. جلب المشكلات الأكثر طلباً بالاعتماد على الكاش (سريع جداً وبدون تحميل على السيرفر)
+let topProbs = [...problemsCache]; // أخذ نسخة من الكاش
+
+// فلترة بناءً على صلاحيات المستخدم
+if (!currentUser || currentUser.role === 'user') {
+    topProbs = topProbs.filter(p => p.status === 'active');
+}
+
+// ترتيب تنازلي حسب المشاهدات واقتطاع أول 5 فقط
+topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
             const trendContainer = document.getElementById('home-trending');
             trendContainer.innerHTML = '';
             
@@ -2184,19 +2328,28 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
         }
 
         const originalFetchProblems = fetchProblems;
-        fetchProblems = async function() {
-            await originalFetchProblems();
-            await loadHomeData(); 
-            loadNotifications(); // تشغيل الإشعارات وتحديث الجرس
-			
-            const loaderScreen = document.getElementById('loading-screen');
-            if(loaderScreen) {
-                loaderScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loaderScreen.style.display = 'none';
-                }, 500); 
-            }
-        };
+fetchProblems = async function() {
+    try {
+        // 1. ننتظر جلب المشكلات أولاً ليتم تعبئة الكاش (problemsCache)
+        await originalFetchProblems();
+        
+        // 2. ثم نقوم بتحميل الصفحة الرئيسية التي ستقرأ التريند من الكاش الجاهز فوراً
+        await loadHomeData();
+        
+        loadNotifications(); // تشغيل الإشعارات وتحديث الجرس
+    } catch (error) {
+        console.error("حدث خطأ أثناء جلب البيانات:", error);
+    } finally {
+        // صمام الأمان: إخفاء شاشة التحميل في كل الأحوال (حتى لو فشل الاتصال)
+        const loaderScreen = document.getElementById('loading-screen');
+        if(loaderScreen) {
+            loaderScreen.style.opacity = '0';
+            setTimeout(() => {
+                loaderScreen.style.display = 'none';
+            }, 500); 
+        }
+    }
+};
 		
 		// ==========================================
         // 8. AUDIT LOG SYSTEM (سجل التعديلات)
