@@ -387,6 +387,84 @@
             .modal-flex-wrapper .modal { height: auto; overflow-y: visible; }
             .toc-container { width: 100%; max-width: 800px; max-height: 300px; position: static; margin-bottom: 10px; }
         }
+	
+/* =========================================
+           أكواد الوضع الليلي الشامل (Dark Mode)
+           ========================================= */
+        body.dark-mode {
+            --bg-gradient: #0f172a; /* كحلي غامق مريح */
+            --glass-bg: rgba(30, 41, 59, 0.95);
+            --glass-border: rgba(71, 85, 105, 0.8);
+            --text-dark: #f8fafc; /* أبيض ساطع للنصوص */
+            --text-muted: #94a3b8;
+        }
+
+        /* إجبار العناصر ذات الألوان الصلبة على الاستجابة للوضع الليلي */
+        body.dark-mode .modal, 
+        body.dark-mode .cat-card, 
+        body.dark-mode .trending-card, 
+        body.dark-mode .ticket-card, 
+        body.dark-mode #admin-search-gaps, 
+        body.dark-mode #view-content table, 
+        body.dark-mode .editor-content table, 
+        body.dark-mode .chat-layout, 
+        body.dark-mode .chat-sidebar, 
+        body.dark-mode .bubble.received,
+        body.dark-mode .filter-bar {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border-color: var(--glass-border) !important;
+        }
+
+        body.dark-mode .chat-main { background-color: #0f172a !important; }
+        body.dark-mode .bubble.sent { background-color: #064e3b !important; color: white !important;} /* أخضر غامق لرسائلي */
+        
+        body.dark-mode .editor-toolbar, 
+        body.dark-mode .chat-header, 
+        body.dark-mode .chat-input-area, 
+        body.dark-mode .notif-header, 
+        body.dark-mode #call-notes-container, 
+        body.dark-mode .toc-container {
+            background-color: #0f172a !important;
+            border-color: var(--glass-border) !important;
+        }
+
+        body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+            background-color: #334155 !important;
+            color: white !important;
+            border-color: #475569 !important;
+        }
+        body.dark-mode .path-item { background: #334155; color: #93c5fd; }
+        body.dark-mode .views-badge { background: #334155; color: #cbd5e1; }
+        body.dark-mode .notif-item:hover { background-color: #334155 !important; }
+		
+		/* =========================================
+           تنسيقات المفضلة وشريط الأخبار العاجلة
+           ========================================= */
+        .bookmark-icon {
+            color: var(--glass-border);
+            transition: 0.2s;
+            position: absolute;
+            top: 15px;
+            left: 15px; /* يمين في الواجهة الإنجليزية ويسار في العربية */
+            font-size: 1.3rem;
+            z-index: 10;
+        }
+        html[dir="ltr"] .bookmark-icon { left: auto; right: 15px; }
+        .bookmark-icon.bookmarked { color: #f59e0b; }
+        .bookmark-icon:hover { color: #f59e0b; transform: scale(1.2); }
+
+        @keyframes blinkFast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        #news-ticker-text {
+            flex: 1;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        html[dir="ltr"] #news-ticker-text { direction: ltr; }
 		
 	</style>
 	
@@ -427,6 +505,12 @@
         <div class="nav-item" onclick="showSection('notes', this)">
             <i class="fas fa-book"></i> <span class="txt-notes">ملاحظاتي الدائمة</span>
         </div>
+		<div class="nav-item hidden" id="nav-bookmarks" onclick="showSection('bookmarks', this); loadBookmarks();">
+            <i class="fas fa-star"></i> <span class="txt-bookmarks">مفضلتي</span>
+        </div>
+        <div class="nav-item" onclick="openQuickNoteModal()" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
+            <i class="fas fa-bolt"></i> <span>النوتة السريعة</span>
+        </div>
         
         <div style="margin-top: auto;">
 		<div class="nav-item" id="nav-honor" onclick="showSection('honor', this); loadHonorBoard();" style="color: #f59e0b;">
@@ -448,13 +532,21 @@
 
     <!-- Main Content -->
     <main class="main-content">
+	<div id="news-ticker-wrapper" class="hidden" style="background: linear-gradient(90deg, #ef4444, #dc2626); color: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);">
+            <i class="fas fa-bolt" style="animation: blinkFast 1s infinite; font-size: 1.3rem; color: #fde047;"></i>
+            <marquee id="news-ticker-text" behavior="scroll" direction="right" scrollamount="6"></marquee>
+            <button id="btn-edit-news" class="hidden" onclick="openNewsModal()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s;"><i class="fas fa-edit"></i> تعديل</button>
+        </div>
         <header class="top-bar">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="إخفاء/إظهار القائمة"><i class="fas fa-bars"></i></button>
                 <div class="lang-switch">
+                <button class="lang-btn" id="btn-dark-mode" onclick="toggleDarkMode()" title="الوضع الليلي / النهاري" style="margin-inline-end: 10px; font-size: 1.2rem;">
+                    <i class="fas fa-moon"></i>
+                </button>
                 <button class="lang-btn active" onclick="switchLang('ar', this)">العربية</button>
                 <button class="lang-btn" onclick="switchLang('en', this)">English</button>
-				</div>
+            </div>
             
             <div class="user-info">
                 <div class="notif-wrapper" id="notification-wrapper">
@@ -478,6 +570,8 @@
                 </button>
             </div>
         </header>
+		
+		
 
 <section id="sec-dashboard" class="hidden">
             <h2 style="margin-bottom: 20px; color: var(--primary);" class="txt-dashboard-title">لوحة التحكم والإحصائيات</h2>
@@ -574,6 +668,25 @@
             <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveUserEdit()">حفظ التعديلات</button>
         </div>
     </div>
+	
+	<div class="modal-overlay" id="modal-quick-note" style="z-index: 10060;">
+        <div class="modal glass" style="max-width: 400px; padding: 20px;">
+            <i class="fas fa-times close-modal" onclick="closeModal('modal-quick-note')"></i>
+            <h3 style="margin-bottom: 15px; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-bolt" style="color: #f59e0b;"></i> نوتة سريعة
+            </h3>
+            <textarea id="quick-note-text" class="form-control" style="height: 120px; resize: vertical; margin-bottom: 15px; font-size: 1.1rem; line-height: 1.6;" placeholder="اكتب ملاحظاتك أثناء المكالمة هنا... (اختصار Alt + N)"></textarea>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-success" style="flex: 1; justify-content: center;" onclick="copyQuickNoteData()">
+                    <i class="fas fa-copy"></i>  نسخ بالكامل
+                </button>
+                <button class="btn btn-primary hidden" id="btn-save-quick-note" style="flex: 1; justify-content: center;" onclick="saveQuickNoteToPermanent()">
+                    <i class="fas fa-save"></i> حفظ في الملاحظات الدائمة
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="modal-overlay" id="modal-forgot-pass">
         <div class="modal modal-sm glass">
@@ -638,6 +751,11 @@
             </div>
         </section>
 
+<section id="sec-bookmarks" class="hidden">
+            <div class="section-title"><i class="fas fa-star" style="color: #f59e0b;"></i> المقالات المفضلة (الوصول السريع)</div>
+            <div class="problems-grid" id="bookmarks-container"></div>
+        </section>
+		
         <!-- Permanent Notes Section -->
         <section id="sec-notes" class="hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
@@ -840,6 +958,18 @@
             </button>
         </div>
     </div>
+	
+	<div class="modal-overlay" id="modal-news" style="z-index: 10030;">
+            <div class="modal modal-sm glass">
+                <i class="fas fa-times close-modal" onclick="closeModal('modal-news')"></i>
+                <h2 style="margin-bottom: 20px; color: var(--danger);"><i class="fas fa-bullhorn"></i> تحديث شريط الأخبار</h2>
+                <div class="form-group">
+                    <label>الخبر العاجل (اتركه فارغاً لإخفاء الشريط)</label>
+                    <textarea id="news-input-text" class="form-control" style="height: 100px; resize:vertical; font-size: 1.1rem; font-weight: bold; color: var(--danger);" placeholder="مثال: يوجد تأخير حالياً في تحديث نظام بوابات سالك..."></textarea>
+                </div>
+                <button class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="saveNewsTicker()"><i class="fas fa-broadcast-tower"></i> بث الخبر لكل الوكلاء</button>
+            </div>
+        </div>
 
 
 <div class="modal-overlay" id="modal-category" style="z-index: 10001;">
@@ -1087,8 +1217,17 @@
         }
 
         function showSection(sec, element) {
-            if(sec === 'notes' && !currentUser) {
-                alert(currentLang === 'ar' ? "يرجى تسجيل الدخول للوصول لملاحظاتك." : "Please login to access notes.");
+            if((sec === 'notes' || sec === 'bookmarks') && !currentUser) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: currentLang === 'ar' ? "يرجى تسجيل الدخول للوصول لهذه الصفحة." : "Please login to access this page.",
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: 'var(--glass-bg)',
+                    color: 'var(--text-dark)'
+                });
                 showSection('home', document.querySelector('.nav-item')); 
                 openModal('modal-auth');
                 return;
@@ -1210,6 +1349,10 @@ function authModeTextUpdate() {
             closeModal('modal-auth');
             document.getElementById('auth-username').value = '';
             document.getElementById('auth-password').value = '';
+			document.getElementById('nav-bookmarks').classList.remove('hidden');
+            if(currentUser.role === 'moderator' || currentUser.role === 'admin') {
+                document.getElementById('btn-edit-news').classList.remove('hidden');
+            }
             
             // تهيئة مساحة العمل
             myNotesData = parseNotesData(currentUser.notes);
@@ -1250,6 +1393,8 @@ function authModeTextUpdate() {
             document.getElementById('permanent-notes').value = '';
 			document.getElementById('nav-chat').classList.add('hidden');
             document.getElementById('nav-tickets').classList.add('hidden');
+			document.getElementById('nav-bookmarks').classList.add('hidden');
+            document.getElementById('btn-edit-news').classList.add('hidden');
             showSection('home', document.querySelectorAll('.nav-item')[1]);
             updateUserDisplay();
         }
@@ -1580,45 +1725,76 @@ function authModeTextUpdate() {
             }
         }
 
+        // دالة مساعدة لإخفاء شاشة التحميل فوراً
+        function hideLoader() {
+            const loaderScreen = document.getElementById('loading-screen');
+            if(loaderScreen && loaderScreen.style.display !== 'none') {
+                loaderScreen.style.opacity = '0';
+                setTimeout(() => loaderScreen.style.display = 'none', 500);
+            }
+        }
+
+        // الدالة الرئيسية المعدلة (تعمل بنظام الكاش أولاً للسرعة الصاروخية)
         async function fetchProblems() {
+            // 1. القراءة من الكاش المحلي أولاً (لفتح الموقع في أقل من ثانية)
+            const localData = localStorage.getItem(`salik_kb_cache_${currentLang}`);
+            if (localData) {
+                try {
+                    problemsCache = JSON.parse(localData);
+                    await loadHomeData(); // عرض الشاشة الرئيسية فوراً
+                    hideLoader();         // إخفاء شاشة التحميل بدون انتظار السيرفر!
+                } catch(e) { console.error("خطأ في قراءة الكاش", e); }
+            }
+
+            // 2. جلب البيانات الحديثة من السيرفر في الخلفية (صامت)
             try {
-                const { data, error } = await supabase.from('kb_problems').select('*').eq('lang', currentLang).order('updated_at', { ascending: false });
-                if(error) throw error;
-                problemsCache = data;
+                const { data, error } = await supabase
+                    .from('kb_problems')
+                    .select('*')
+                    .eq('lang', currentLang)
+                    .order('updated_at', { ascending: false });
                 
-                // الذكاء الجديد: بعد جلب البيانات، نتأكد أين يقف المستخدم حالياً لنقوم بتحديث نفس شاشته فقط!
+                if(error) throw error;
+
+                // تحديث الذاكرة والكاش بالبيانات الجديدة
+                problemsCache = data;
+                localStorage.setItem(`salik_kb_cache_${currentLang}`, JSON.stringify(data));
+
+                // تحديث الواجهة بصمت (لضمان ظهور أي مشكلات جديدة أضيفت للتو)
+                await loadHomeData();
+                loadNotifications();
+                loadNewsTicker();
+
+                // إذا كان الوكيل يبحث عن شيء أثناء التحديث الصامت، نحافظ على بحثه
                 const searchInput = document.getElementById('global-search');
                 const filterSelect = document.getElementById('filter-category');
                 
                 if (searchInput && searchInput.value.trim() !== '') {
-                    searchGlobal(); // لو كان يبحث، حدث نتائج البحث
+                    searchGlobal();
                 } else if (filterSelect && filterSelect.value !== '') {
-                    filterByCategory(filterSelect.value); // لو كان داخل قسم، حدث هذا القسم فقط
+                    filterByCategory(filterSelect.value);
                 }
-                // لو كان في الصفحة الرئيسية، لا نفعل شيئاً (البيانات محفوظة في الخلفية بأمان)
-                
+
             } catch(e) {
-                // Fallback
-                let probs = JSON.parse(localStorage.getItem('local_problems') || '[]');
-                problemsCache = probs.filter(p => p.lang === currentLang).sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+                console.error("حدث خطأ أثناء الاتصال بالسيرفر، سنستمر بالعمل على الكاش:", e);
+            } finally {
+                // صمام أمان إضافي لإخفاء التحميل (في حال كانت أول مرة يفتح الموقع ولا يوجد كاش)
+                hideLoader();
             }
         }
 
-function renderProblems(problems) {
-            // استخدام الكاش بدلاً من جلب الأقسام من السيرفر كل مرة (هذا ما كان يسبب التأخير والتداخل!)
+function renderProblems(problems, containerId = 'problems-container') {
             const cats = categoriesCache; 
-
-            const container = document.getElementById('problems-container');
+            const container = document.getElementById(containerId);
             container.innerHTML = ''; 
 
             let filteredProbs = problems;
-            // المستخدم العادي يرى المفعل فقط، المدير والأدمن يرون الكل
             if (!currentUser || currentUser.role === 'user') {
                 filteredProbs = filteredProbs.filter(p => p.status === 'active' || !p.status);
             }
 
             if(filteredProbs.length === 0) {
-                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center;">لا توجد نتائج مطابقة.</p>`;
+                container.innerHTML = `<p style="grid-column: 1/-1; text-align:center;">لا توجد نتائج.</p>`;
                 return;
             }
 
@@ -1636,9 +1812,18 @@ function renderProblems(problems) {
                     pathHTML += `<span class="path-item" style="background:var(--danger); color:white;">قيد الانتظار</span>`;
                 }
 
+                // كود المفضلة (النجمة)
+                let bookmarkHtml = '';
+                if(currentUser) {
+                    const isBookmarked = myNotesData.bookmarks && myNotesData.bookmarks.includes(p.id) ? 'bookmarked' : '';
+                    bookmarkHtml = `<i class="fas fa-star bookmark-icon ${isBookmarked}" id="bookmark-icon-${p.id}" onclick="event.stopPropagation(); toggleBookmark('${p.id}')" title="إضافة للمفضلة"></i>`;
+                }
+
                 const card = document.createElement('div');
                 card.className = 'problem-card glass';
+                card.style.position = 'relative'; // ضروري للنجمة
                 card.innerHTML = `
+                    ${bookmarkHtml}
                     <div class="path-container">${pathHTML}</div>
                     <div class="problem-title">${p.sub_procedure ? p.sub_procedure : p.title}</div>
                     <div class="problem-date"><i class="far fa-clock"></i> ${new Date(p.updated_at).toLocaleDateString()}</div>
@@ -1647,7 +1832,6 @@ function renderProblems(problems) {
                 container.appendChild(card);
             });
         }
-		
 		function generateTOC() {
             const content = document.getElementById('view-content');
             const tocContainer = document.getElementById('toc-container');
@@ -1808,14 +1992,14 @@ function renderProblems(problems) {
         let myNotesData = { main: "", sticky: [] };
 
         function parseNotesData(rawStr) {
-            if (!rawStr) return { main: "", sticky: [] };
+            if (!rawStr) return { main: "", sticky: [], bookmarks: [] };
             try {
                 const parsed = JSON.parse(rawStr);
+                if (!parsed.bookmarks) parsed.bookmarks = []; // تهيئة المفضلة
                 if (parsed.main !== undefined) return parsed;
-                return { main: rawStr, sticky: [] }; // للنسخ القديمة
-            } catch(e) { return { main: rawStr, sticky: [] }; }
+                return { main: rawStr, sticky: [], bookmarks: [] };
+            } catch(e) { return { main: rawStr, sticky: [], bookmarks: [] }; }
         }
-
         // الحفظ التلقائي للمسودة
         document.getElementById('permanent-notes').addEventListener('input', (e) => {
             if(!currentUser) return;
@@ -2287,26 +2471,26 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
         }
 
         // 4. الدالة الرئيسية للبحث (المربوطة بمربع البحث)
-        function searchGlobal() {
+function searchGlobal() {
     const rawQuery = document.getElementById('global-search').value.trim();
     const resultsSection = document.getElementById('search-results-section');
     const defaultContent = document.getElementById('home-default-content');
     
-    // 1. If the search box is empty, show default content and exit
+    // 1. إذا كان مربع البحث فارغاً، أظهر المحتوى الافتراضي واخرج
     if(rawQuery === '') {
         resultsSection.classList.add('hidden');
         defaultContent.classList.remove('hidden'); 
         return;
     }
     
-    // 2. Hide default content and show results section
+    // 2. إخفاء المحتوى الافتراضي وإظهار قسم النتائج
     resultsSection.classList.remove('hidden');
     defaultContent.classList.add('hidden'); 
     
-    // 3. Prepare search terms
+    // 3. تجهيز كلمات البحث
     const queryTerms = normalizeText(rawQuery).split(/\s+/);
     
-    // 4. Calculate scores and declare scoredProblems BEFORE checking its length
+    // 4. تعريف وحساب المصفوفة (يجب أن يتم ذلك هنا قبل فحص طولها!)
     let scoredProblems = problemsCache.map(p => {
         const isActive = (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active');
         if(!isActive) return { ...p, _score: 0 };
@@ -2314,7 +2498,7 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
         return { ...p, _score: calculateSearchScore(p, queryTerms) };
     }).filter(p => p._score > 0); 
     
-    // 5. NOW check if the results are empty
+    // 5. الآن يمكننا التحقق بأمان مما إذا كانت النتائج فارغة
     if(scoredProblems.length === 0) {
         const container = document.getElementById('problems-container');
         container.innerHTML = `
@@ -2327,7 +2511,7 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
         return;
     }
     
-    // 6. If we have results, sort and render them
+    // 6. ترتيب النتائج المكتشفة وعرضها
     scoredProblems.sort((a, b) => b._score - a._score);
     renderProblems(scoredProblems);
 }
@@ -2336,30 +2520,6 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
             const p = problemsCache.find(x => String(x.id) === String(id));
             if(p) viewProblem(p);
         }
-
-        const originalFetchProblems = fetchProblems;
-fetchProblems = async function() {
-    try {
-        // 1. ننتظر جلب المشكلات أولاً ليتم تعبئة الكاش (problemsCache)
-        await originalFetchProblems();
-        
-        // 2. ثم نقوم بتحميل الصفحة الرئيسية التي ستقرأ التريند من الكاش الجاهز فوراً
-        await loadHomeData();
-        
-        loadNotifications(); // تشغيل الإشعارات وتحديث الجرس
-    } catch (error) {
-        console.error("حدث خطأ أثناء جلب البيانات:", error);
-    } finally {
-        // صمام الأمان: إخفاء شاشة التحميل في كل الأحوال (حتى لو فشل الاتصال)
-        const loaderScreen = document.getElementById('loading-screen');
-        if(loaderScreen) {
-            loaderScreen.style.opacity = '0';
-            setTimeout(() => {
-                loaderScreen.style.display = 'none';
-            }, 500); 
-        }
-    }
-};
 		
 		// ==========================================
         // 8. AUDIT LOG SYSTEM (سجل التعديلات)
@@ -2486,13 +2646,33 @@ fetchProblems = async function() {
 
         // دالة النسخ (Copy to Clipboard)
         function copyCallNote(noteId) {
-            const textToCopy = document.getElementById(`note-text-${noteId}`).innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert("تم نسخ النوتة بنجاح! جاهزة للصق.");
-            }).catch(err => {
-                console.error('فشل النسخ: ', err);
-            });
-        }
+    const textToCopy = document.getElementById(`note-text-${noteId}`).innerText;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        // استخدام SweetAlert كإشعار خفيف (Toast) يختفي تلقائياً
+        Swal.fire({
+            toast: true,
+            position: 'top-end', // ستظهر في الزاوية العلوية (يسار أو يمين حسب اللغة)
+            icon: 'success',
+            title: 'تم نسخ النوتة بنجاح! جاهزة للصق.',
+            showConfirmButton: false, // إخفاء زر "حسناً"
+            timer: 2000, // ستختفي تلقائياً بعد ثانيتين (2000 ملي ثانية)
+            timerProgressBar: true, // شريط تحميل جمالي يوضح متى ستختفي
+            background: 'var(--glass-bg)', // لتتماشى مع ألوان موقعك
+            color: 'var(--text-dark)'
+        });
+    }).catch(err => {
+        console.error('فشل النسخ: ', err);
+        // إشعار خفيف في حالة الخطأ
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: 'عذراً، فشل النسخ!',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    });
+}
 
         // فتح نافذة الإضافة
         function openCallNoteModal() {
@@ -2874,6 +3054,11 @@ fetchProblems = async function() {
                         if(activeChatReceiver === msg.receiver || (msg.receiver === currentUser.username && activeChatReceiver === msg.sender)) {
                             appendMessageUI(msg);
                             scrollToChatBottom();
+							
+							if (msg.receiver === 'broadcast_news') {
+                        loadNewsTicker(); // تحديث شريط الأخبار فوراً لكل الوكلاء بدون ريفريش
+                        return;
+                    }
                         } else {
                             // تنبيه بسيط
                             document.getElementById('nav-chat').style.color = 'var(--danger)'; // لفت الانتباه
@@ -3016,6 +3201,172 @@ fetchProblems = async function() {
                 }
             }
         });
+		
+		// ==========================================
+        // الوضع الليلي (Dark Mode)
+        // ==========================================
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            
+            // حفظ التفضيل
+            localStorage.setItem('salik_dark_mode', isDark);
+            
+            // تغيير الأيقونة
+            const icon = document.querySelector('#btn-dark-mode i');
+            if (isDark) {
+                icon.className = 'fas fa-sun';
+                icon.style.color = '#f59e0b'; // لون أصفر للشمس
+            } else {
+                icon.className = 'fas fa-moon';
+                icon.style.color = ''; // لون افتراضي للقمر
+            }
+        }
+
+        // تشغيل الوضع الليلي تلقائياً لو كان المستخدم مختاره قبل كدة
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('salik_dark_mode') === 'true') {
+                toggleDarkMode(); // هيشغل الكلاس ويغير الأيقونة
+            }
+        });
+
+        // ==========================================
+        // اختصارات لوحة المفاتيح (Shortcuts)
+        // ==========================================
+        window.addEventListener('keydown', function(e) {
+            // 1. اختصار (Esc) لإغلاق أي نافذة مفتوحة
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+
+            // 2. اختصار (Alt + N) لفتح النوتة السريعة
+            // ضفنا حرف الـ 'ى' عشان لو الكيبورد عربي يشتغل برضه
+            if (e.altKey && (e.key === 'n' || e.key === 'N' || e.key === 'ى')) {
+                e.preventDefault(); // منع الوظيفة الافتراضية للمتصفح
+                openQuickNoteModal();
+            }
+        });
+
+        // ==========================================
+        // برمجة النوتة السريعة
+        // ==========================================
+        function openQuickNoteModal() {
+            openModal('modal-quick-note');
+            
+            // التركيز تلقائياً على مربع النص عشان يكتب فوراً
+            setTimeout(() => document.getElementById('quick-note-text').focus(), 100);
+
+            // إظهار زر "حفظ دائم" فقط لو المستخدم مسجل دخول (ليس زائراً)
+            const saveBtn = document.getElementById('btn-save-quick-note');
+            if (currentUser) {
+                saveBtn.classList.remove('hidden');
+            } else {
+                saveBtn.classList.add('hidden');
+            }
+        }
+
+        function copyQuickNoteData() {
+            const text = document.getElementById('quick-note-text').value;
+            if(!text) return;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم نسخ النوتة بنجاح!', showConfirmButton: false, timer: 1500 });
+                closeModal('modal-quick-note'); // إغلاق النافذة بعد النسخ لسرعة العمل
+            });
+        }
+
+        async function saveQuickNoteToPermanent() {
+            const text = document.getElementById('quick-note-text').value.trim();
+            if (!text || !currentUser) return;
+            
+            // إضافة النص الجديد إلى المسودة الدائمة مع مسافة سطرين
+            myNotesData.main += (myNotesData.main ? '\n\n' : '') + "⚡ ملاحظة سريعة:\n" + text;
+            document.getElementById('permanent-notes').value = myNotesData.main;
+            
+            await saveNotesToDB(); // حفظ في قاعدة البيانات
+            
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم ترحيلها لملاحظاتك الدائمة!', showConfirmButton: false, timer: 2000 });
+            document.getElementById('quick-note-text').value = ''; // تصفير المربع
+            closeModal('modal-quick-note');
+        }
+		
+		// ==========================================
+        // نظام المفضلة (Bookmarks)
+        // ==========================================
+        async function toggleBookmark(probId) {
+            if(!currentUser) return;
+            
+            const idx = myNotesData.bookmarks.indexOf(probId);
+            if(idx > -1) {
+                myNotesData.bookmarks.splice(idx, 1);
+                Swal.fire({toast:true, position:'top-end', icon:'info', title:'تمت الإزالة من المفضلة', showConfirmButton:false, timer:1500});
+            } else {
+                myNotesData.bookmarks.push(probId);
+                Swal.fire({toast:true, position:'top-end', icon:'success', title:'تمت الإضافة للمفضلة ⭐', showConfirmButton:false, timer:1500});
+            }
+            await saveNotesToDB(); // حفظ في قاعدة البيانات
+            
+            // تحديث لون النجمة فوراً
+            const icon = document.getElementById(`bookmark-icon-${probId}`);
+            if(icon) {
+                if(idx > -1) icon.classList.remove('bookmarked');
+                else icon.classList.add('bookmarked');
+            }
+            
+            // لو كان فاتح شاشة المفضلة، حدثها
+            if(!document.getElementById('sec-bookmarks').classList.contains('hidden')) {
+                loadBookmarks();
+            }
+        }
+
+        function loadBookmarks() {
+            if(!currentUser) return;
+            const container = document.getElementById('bookmarks-container');
+            if(!myNotesData.bookmarks || myNotesData.bookmarks.length === 0) {
+                container.innerHTML = '<p style="text-align:center; grid-column:1/-1; color:var(--text-muted);">لا توجد مقالات في المفضلة. اضغط على أيقونة النجمة في أي إجراء لإضافته هنا لسهولة الوصول إليه.</p>';
+                return;
+            }
+            // جلب المقالات المفضلة فقط
+            const bookmarkedProbs = problemsCache.filter(p => myNotesData.bookmarks.includes(p.id));
+            renderProblems(bookmarkedProbs, 'bookmarks-container');
+        }
+
+        // ==========================================
+        // نظام الأخبار العاجلة اللحظي (News Ticker)
+        // ==========================================
+        async function loadNewsTicker() {
+            try {
+                // نستخدم جدول الشات بحيلة ذكية لبث الأخبار بدون عمل جدول جديد
+                const { data } = await supabase.from('chat_messages').select('*').eq('receiver', 'broadcast_news').order('created_at', { ascending: false }).limit(1);
+                const tickerWrapper = document.getElementById('news-ticker-wrapper');
+                const tickerText = document.getElementById('news-ticker-text');
+                
+                if (data && data.length > 0 && data[0].message.trim() !== '') {
+                    tickerText.innerText = data[0].message;
+                    tickerWrapper.classList.remove('hidden');
+                } else {
+                    tickerWrapper.classList.add('hidden');
+                }
+            } catch(e) { console.error(e); }
+        }
+		
+
+        function openNewsModal() {
+            document.getElementById('news-input-text').value = document.getElementById('news-ticker-text').innerText;
+            openModal('modal-news');
+        }
+
+        async function saveNewsTicker() {
+            const text = document.getElementById('news-input-text').value.trim();
+            // إرسال كرسالة عامة
+            await supabase.from('chat_messages').insert([{ sender: currentUser.username, receiver: 'broadcast_news', message: text }]);
+            closeModal('modal-news');
+            Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم بث الخبر العاجل للجميع بنجاح!', showConfirmButton:false, timer:2500});
+            loadNewsTicker(); // تحديث شاشتي
+        }
 		
         // Initialize App
         fetchProblems();
