@@ -1125,6 +1125,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1700,28 +1701,33 @@ function authModeTextUpdate() {
             };
 
             try {
+                let dbError = null;
+
                 if(id) {
-                    await supabase.from('kb_problems').update(payload).eq('id', id);
+                    // التعديل
+                    const { error } = await supabase.from('kb_problems').update(payload).eq('id', id);
+                    dbError = error;
                 } else {
-                    // لا نرسل الـ id هنا، قاعدة البيانات ستقوم بإنشاء UUID معقد وتلقائي
-                    await supabase.from('kb_problems').insert([payload]);
+                    // الإضافة الجديدة
+                    const { error } = await supabase.from('kb_problems').insert([payload]);
+                    dbError = error;
                 }
+
+                // السر هنا: إذا رفضت قاعدة البيانات الحفظ، نوقف الكود ونرمي الخطأ لكي يظهر لنا!
+                if (dbError) throw dbError;
+
                 closeModal('modal-problem');
-				logAction(id ? 'تعديل' : 'إضافة', 'موضوع', `عنوان الموضوع: ${title}`);
-                fetchProblems();
+                
+                // إشعار نجاح صريح
+                Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم حفظ الموضوع بنجاح!', showConfirmButton:false, timer:2000});
+                
+                logAction(id ? 'تعديل' : 'إضافة', 'موضوع', `عنوان الموضوع: ${title}`);
+                fetchProblems(); // تحديث الواجهة
+
             } catch(e) {
-                // Fallback to LocalStorage
-                let probs = JSON.parse(localStorage.getItem('local_problems') || '[]');
-                if(id) {
-                    let idx = probs.findIndex(p => p.id === id);
-                    if(idx > -1) probs[idx] = { ...probs[idx], ...payload };
-                } else {
-                    payload.id = Date.now().toString();
-                    probs.push(payload);
-                }
-                localStorage.setItem('local_problems', JSON.stringify(probs));
-                closeModal('modal-problem');
-                fetchProblems();
+                // الآن سيظهر لك الخطأ الفعلي في الكونسول إن وُجد
+                console.error("Supabase Database Error:", e);
+                alert("حدث خطأ أثناء الحفظ! لقد طبعت تفاصيل الخطأ في الكونسول (F12) لمعرفة السبب.");
             }
         }
 
@@ -1734,19 +1740,23 @@ function authModeTextUpdate() {
             }
         }
 
-        // الدالة الرئيسية المعدلة (تعمل بنظام الكاش أولاً للسرعة الصاروخية)
-        async function fetchProblems() {
-            // 1. القراءة من الكاش المحلي أولاً (لفتح الموقع في أقل من ثانية)
-            const localData = localStorage.getItem(`salik_kb_cache_${currentLang}`);
-            if (localData) {
+        // ==========================================
+        // الدالة الرئيسية المعدلة (مضادة لأخطاء المتصفح وتحدث الشاشة بذكاء)
+        // ==========================================
+        async function fetchProblems(skipCache = false) {
+            // 1. محاولة القراءة من الكاش (إذا لم نكن قد حفظنا للتو)
+            if (!skipCache) {
                 try {
-                    problemsCache = JSON.parse(localData);
-                    await loadHomeData(); // عرض الشاشة الرئيسية فوراً
-                    hideLoader();         // إخفاء شاشة التحميل بدون انتظار السيرفر!
-                } catch(e) { console.error("خطأ في قراءة الكاش", e); }
+                    const localData = await localforage.getItem(`salik_kb_cache_${currentLang}`);
+                    if (localData) {
+                        problemsCache = typeof localData === 'string' ? JSON.parse(localData) : localData;
+                        await refreshActiveScreen(); // تحديث الشاشة النشطة
+                        hideLoader();
+                    }
+                } catch(e) { console.warn("تم تجاهل قراءة الكاش بسبب قيود المتصفح المحلي."); }
             }
 
-            // 2. جلب البيانات الحديثة من السيرفر في الخلفية (صامت)
+            // 2. الجلب من السيرفر (Supabase)
             try {
                 const { data, error } = await supabase
                     .from('kb_problems')
@@ -1755,31 +1765,51 @@ function authModeTextUpdate() {
                     .order('updated_at', { ascending: false });
                 
                 if(error) throw error;
+                problemsCache = data; // تحديث الذاكرة فوراً
 
-                // تحديث الذاكرة والكاش بالبيانات الجديدة
-                problemsCache = data;
-                localStorage.setItem(`salik_kb_cache_${currentLang}`, JSON.stringify(data));
+                // 3. محاولة الحفظ في الكاش (في صندوق آمن حتى لا يوقف النظام إذا منعه المتصفح)
+                try {
+                    await localforage.setItem(`salik_kb_cache_${currentLang}`, data);
+                } catch(cacheError) {
+                    console.warn("تم منع حفظ الكاش من قبل المتصفح، ولكن النظام سيستمر بالعمل بشكل طبيعي.");
+                }
 
-                // تحديث الواجهة بصمت (لضمان ظهور أي مشكلات جديدة أضيفت للتو)
-                await loadHomeData();
+                // 4. تحديث الواجهة بالبيانات الجديدة بأمان تام
+                await refreshActiveScreen();
                 loadNotifications();
                 loadNewsTicker();
 
-                // إذا كان الوكيل يبحث عن شيء أثناء التحديث الصامت، نحافظ على بحثه
-                const searchInput = document.getElementById('global-search');
-                const filterSelect = document.getElementById('filter-category');
-                
-                if (searchInput && searchInput.value.trim() !== '') {
-                    searchGlobal();
-                } else if (filterSelect && filterSelect.value !== '') {
-                    filterByCategory(filterSelect.value);
-                }
-
             } catch(e) {
-                console.error("حدث خطأ أثناء الاتصال بالسيرفر، سنستمر بالعمل على الكاش:", e);
+                console.error("حدث خطأ أثناء الاتصال بالسيرفر:", e);
             } finally {
-                // صمام أمان إضافي لإخفاء التحميل (في حال كانت أول مرة يفتح الموقع ولا يوجد كاش)
                 hideLoader();
+            }
+        }
+
+        // دالة سحرية جديدة لتحديث المكان الذي يقف فيه الوكيل حالياً
+        async function refreshActiveScreen() {
+            await loadHomeData(); // تحديث الأقسام والتريند الأساسي
+            
+            const searchInput = document.getElementById('global-search');
+            const filterSelect = document.getElementById('filter-category');
+            
+            // تحديث البحث لو كان الوكيل يبحث
+            if (searchInput && searchInput.value.trim() !== '') {
+                searchGlobal();
+            } 
+            // تحديث الأقسام لو كان الوكيل يتصفح قسماً
+            else if (filterSelect && filterSelect.value !== '') {
+                filterByCategory(filterSelect.value);
+            }
+            
+            // تحديث شاشة "جميع الأقسام" لو كانت مفتوحة
+            if (document.getElementById('sec-all-cats') && !document.getElementById('sec-all-cats').classList.contains('hidden')) {
+                loadAllCategories();
+            }
+            
+            // تحديث المفضلة لو كانت مفتوحة
+            if (document.getElementById('sec-bookmarks') && !document.getElementById('sec-bookmarks').classList.contains('hidden')) {
+                loadBookmarks();
             }
         }
 
