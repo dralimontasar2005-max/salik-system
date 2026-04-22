@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -2287,45 +2288,49 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
 
         // 4. الدالة الرئيسية للبحث (المربوطة بمربع البحث)
         function searchGlobal() {
-            const rawQuery = document.getElementById('global-search').value.trim();
-            const resultsSection = document.getElementById('search-results-section');
-            const defaultContent = document.getElementById('home-default-content');
-            if(scoredProblems.length === 0) {
-                const container = document.getElementById('problems-container');
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align:center; padding: 30px;">
-                        <h3 style="color: var(--danger); margin-bottom: 10px;">لا توجد نتائج مطابقة!</h3>
-                        <p style="color: var(--text-muted); margin-bottom: 20px;">لم نعثر على نتيجة لـ "${rawQuery}". هل تريد تصعيد هذه المشكلة للإدارة لإضافتها؟</p>
-                        <button class="btn btn-danger" onclick="openModal('modal-ticket'); document.getElementById('ticket-desc').value = 'لم أتمكن من العثور على حل بخصوص: ${rawQuery}';"><i class="fas fa-ticket-alt"></i> تصعيد المشكلة</button>
-                    </div>`;
-                logSearchGap(rawQuery); // تسجيل الكلمة المفقودة للإدارة
-                return;
-            }
-            if(rawQuery === '') {
-                resultsSection.classList.add('hidden');
-                defaultContent.classList.remove('hidden'); 
-                return;
-            }
-            
-            resultsSection.classList.remove('hidden');
-            defaultContent.classList.add('hidden'); 
-            
-            // تقطيع جملة البحث إلى كلمات منفصلة وتنظيفها
-            const queryTerms = normalizeText(rawQuery).split(/\s+/);
-            
-            // حساب نقاط كل موضوع
-            let scoredProblems = problemsCache.map(p => {
-                const isActive = (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active');
-                if(!isActive) return { ...p, _score: 0 };
-                
-                return { ...p, _score: calculateSearchScore(p, queryTerms) };
-            }).filter(p => p._score > 0); // الاحتفاظ فقط بالمواضيع التي سجلت نقاطاً
-            
-            // ترتيب المواضيع من الأعلى نقاطاً إلى الأقل (الأكثر صلة يظهر أولاً)
-            scoredProblems.sort((a, b) => b._score - a._score);
-            
-            renderProblems(scoredProblems);
-        }
+    const rawQuery = document.getElementById('global-search').value.trim();
+    const resultsSection = document.getElementById('search-results-section');
+    const defaultContent = document.getElementById('home-default-content');
+    
+    // 1. If the search box is empty, show default content and exit
+    if(rawQuery === '') {
+        resultsSection.classList.add('hidden');
+        defaultContent.classList.remove('hidden'); 
+        return;
+    }
+    
+    // 2. Hide default content and show results section
+    resultsSection.classList.remove('hidden');
+    defaultContent.classList.add('hidden'); 
+    
+    // 3. Prepare search terms
+    const queryTerms = normalizeText(rawQuery).split(/\s+/);
+    
+    // 4. Calculate scores and declare scoredProblems BEFORE checking its length
+    let scoredProblems = problemsCache.map(p => {
+        const isActive = (currentUser?.role === 'moderator' || currentUser?.role === 'admin' ? true : p.status === 'active');
+        if(!isActive) return { ...p, _score: 0 };
+        
+        return { ...p, _score: calculateSearchScore(p, queryTerms) };
+    }).filter(p => p._score > 0); 
+    
+    // 5. NOW check if the results are empty
+    if(scoredProblems.length === 0) {
+        const container = document.getElementById('problems-container');
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; padding: 30px;">
+                <h3 style="color: var(--danger); margin-bottom: 10px;">لا توجد نتائج مطابقة!</h3>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">لم نعثر على نتيجة لـ "${rawQuery}". هل تريد تصعيد هذه المشكلة للإدارة لإضافتها؟</p>
+                <button class="btn btn-danger" onclick="openModal('modal-ticket'); document.getElementById('ticket-desc').value = 'لم أتمكن من العثور على حل بخصوص: ${rawQuery}';"><i class="fas fa-ticket-alt"></i> تصعيد المشكلة</button>
+            </div>`;
+        logSearchGap(rawQuery); // تسجيل الكلمة المفقودة للإدارة
+        return;
+    }
+    
+    // 6. If we have results, sort and render them
+    scoredProblems.sort((a, b) => b._score - a._score);
+    renderProblems(scoredProblems);
+}
 
         function viewProblemById(id) {
             const p = problemsCache.find(x => String(x.id) === String(id));
