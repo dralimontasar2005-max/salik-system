@@ -481,7 +481,7 @@
     <aside class="sidebar glass">
         <div class="logo" style="font-size: 1.2rem;">المساعد الذكي - سالك</div>
         
-<div class="nav-item hidden" id="nav-dashboard" onclick="showSection('dashboard', this)">
+<div class="nav-item hidden" id="nav-dashboard" onclick="showSection('dashboard', this); loadDashboardStats();">
             <i class="fas fa-chart-pie"></i> <span class="txt-dashboard">لوحة التحكم</span>
         </div>
         <div class="nav-item hidden" id="nav-users" onclick="showSection('users', this); loadUsersManagement();">
@@ -1346,11 +1346,14 @@ function authModeTextUpdate() {
             }
         }
 
-        function loginSuccess() {
+        function loginSuccess(isRestore = false) {
+            // السر هنا: حفظ جلسة المستخدم حتى لا يخرج عند عمل ريفريش
+            localStorage.setItem('salik_active_user', JSON.stringify(currentUser));
+
             closeModal('modal-auth');
             document.getElementById('auth-username').value = '';
             document.getElementById('auth-password').value = '';
-			document.getElementById('nav-bookmarks').classList.remove('hidden');
+            document.getElementById('nav-bookmarks').classList.remove('hidden');
             if(currentUser.role === 'moderator' || currentUser.role === 'admin') {
                 document.getElementById('btn-edit-news').classList.remove('hidden');
             }
@@ -1363,7 +1366,7 @@ function authModeTextUpdate() {
             document.getElementById('btn-login-nav').style.display = 'none';
             document.getElementById('btn-logout').style.display = 'flex';
             document.getElementById('btn-change-pass').classList.remove('hidden');
-			document.getElementById('nav-chat').classList.remove('hidden');
+            document.getElementById('nav-chat').classList.remove('hidden');
             document.getElementById('nav-tickets').classList.remove('hidden');
             
             if(currentUser.role === 'admin' || currentUser.role === 'moderator') {
@@ -1372,29 +1375,33 @@ function authModeTextUpdate() {
                 document.getElementById('nav-users').classList.remove('hidden'); 
                 if(currentUser.role === 'moderator') {
                     document.getElementById('nav-audit').classList.remove('hidden');
-					document.getElementById('btn-add-honor').classList.remove('hidden');
+                    document.getElementById('btn-add-honor').classList.remove('hidden');
                 }
-				loadDashboardStats();
+                loadDashboardStats(); // سيتم جلب الأرقام فوراً حتى لو عملت ريفريش
             }
-            updateUserDisplay();
-			logAction('دخول', 'النظام', 'تم تسجيل الدخول بنجاح');
+            
+            // تسجيل الحدث فقط لو كان تسجيل دخول جديد (وليس ريفريش)
+            if(!isRestore) {
+                logAction('دخول', 'النظام', 'تم تسجيل الدخول بنجاح');
+            }
         }
-		
-		
 
         function logout() {
+            // مسح الجلسة عند تسجيل الخروج
+            localStorage.removeItem('salik_active_user');
+            
             currentUser = null;
             document.getElementById('btn-login-nav').style.display = 'flex';
             document.getElementById('btn-logout').style.display = 'none';
             document.getElementById('btn-add-problem').classList.add('hidden');
             document.getElementById('nav-dashboard').classList.add('hidden'); 
-            document.getElementById('nav-users').classList.add('hidden'); // إخفاء زر إدارة الوكلاء
-			document.getElementById('nav-audit').classList.add('hidden');
-			document.getElementById('btn-add-honor').classList.add('hidden');
+            document.getElementById('nav-users').classList.add('hidden'); 
+            document.getElementById('nav-audit').classList.add('hidden');
+            document.getElementById('btn-add-honor').classList.add('hidden');
             document.getElementById('permanent-notes').value = '';
-			document.getElementById('nav-chat').classList.add('hidden');
+            document.getElementById('nav-chat').classList.add('hidden');
             document.getElementById('nav-tickets').classList.add('hidden');
-			document.getElementById('nav-bookmarks').classList.add('hidden');
+            document.getElementById('nav-bookmarks').classList.add('hidden');
             document.getElementById('btn-edit-news').classList.add('hidden');
             showSection('home', document.querySelectorAll('.nav-item')[1]);
             updateUserDisplay();
@@ -1697,35 +1704,45 @@ function authModeTextUpdate() {
                 category_id: document.getElementById('prob-category').value || null,
                 sub_procedure: document.getElementById('prob-sub').value.trim() || null,
                 updated_at: new Date().toISOString(),
-                status: currentUser.role === 'moderator' ? 'active' : 'pending' // المدير ينشر فوراً، والأدمن معلق
+                status: currentUser.role === 'moderator' ? 'active' : 'pending' 
             };
 
             try {
                 let dbError = null;
+                let returnedData = null; // لتخزين البيانات الراجعة من السيرفر
 
                 if(id) {
-                    // التعديل
-                    const { error } = await supabase.from('kb_problems').update(payload).eq('id', id);
-                    dbError = error;
+                    // أضفنا .select() لكي يعيد لنا السيرفر السطر الذي تم تعديله
+                    const { data, error } = await supabase.from('kb_problems').update(payload).eq('id', id).select();
+                    dbError = error; returnedData = data;
                 } else {
-                    // الإضافة الجديدة
-                    const { error } = await supabase.from('kb_problems').insert([payload]);
-                    dbError = error;
+                    const { data, error } = await supabase.from('kb_problems').insert([payload]).select();
+                    dbError = error; returnedData = data;
                 }
 
-                // السر هنا: إذا رفضت قاعدة البيانات الحفظ، نوقف الكود ونرمي الخطأ لكي يظهر لنا!
                 if (dbError) throw dbError;
 
+                // 🚀 التحديث اللحظي على الرام (RAM)
+                if (returnedData && returnedData.length > 0) {
+                    const savedItem = returnedData[0];
+                    if (id) {
+                        // إذا كان تعديلاً، نبحث عنه في الرام ونحدثه
+                        const index = problemsCache.findIndex(p => p.id === savedItem.id);
+                        if (index > -1) problemsCache[index] = savedItem;
+                    } else {
+                        // إذا كان جديداً، نضعه في أول مصفوفة الرام
+                        problemsCache.unshift(savedItem);
+                    }
+                }
+
                 closeModal('modal-problem');
-                
-                // إشعار نجاح صريح
                 Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم حفظ الموضوع بنجاح!', showConfirmButton:false, timer:2000});
-                
                 logAction(id ? 'تعديل' : 'إضافة', 'موضوع', `عنوان الموضوع: ${title}`);
-                fetchProblems(); // تحديث الواجهة
+                
+                // تحديث الشاشة من الرام فوراً (بدون جلب بيانات جديدة)
+                refreshActiveScreen(); 
 
             } catch(e) {
-                // الآن سيظهر لك الخطأ الفعلي في الكونسول إن وُجد
                 console.error("Supabase Database Error:", e);
                 alert("حدث خطأ أثناء الحفظ! لقد طبعت تفاصيل الخطأ في الكونسول (F12) لمعرفة السبب.");
             }
@@ -1741,23 +1758,18 @@ function authModeTextUpdate() {
         }
 
         // ==========================================
-        // الدالة الرئيسية المعدلة (مضادة لأخطاء المتصفح وتحدث الشاشة بذكاء)
+        // الدالة الرئيسية المعدلة (مباشرة وبدون كاش نهائياً - التعديل لحظي)
         // ==========================================
-        async function fetchProblems(skipCache = false) {
-            // 1. محاولة القراءة من الكاش (إذا لم نكن قد حفظنا للتو)
-            if (!skipCache) {
-                try {
-                    const localData = await localforage.getItem(`salik_kb_cache_${currentLang}`);
-                    if (localData) {
-                        problemsCache = typeof localData === 'string' ? JSON.parse(localData) : localData;
-                        await refreshActiveScreen(); // تحديث الشاشة النشطة
-                        hideLoader();
-                    }
-                } catch(e) { console.warn("تم تجاهل قراءة الكاش بسبب قيود المتصفح المحلي."); }
+        async function fetchProblems() {
+            // إظهار شاشة التحميل بشكل خفيف كدليل للوكيل أنه يتم تحديث البيانات
+            const loaderScreen = document.getElementById('loading-screen');
+            if(loaderScreen) {
+                loaderScreen.style.display = 'flex';
+                loaderScreen.style.opacity = '1';
             }
 
-            // 2. الجلب من السيرفر (Supabase)
             try {
+                // الجلب المباشر والحي من قاعدة البيانات دائماً وأبداً
                 const { data, error } = await supabase
                     .from('kb_problems')
                     .select('*')
@@ -1765,16 +1777,9 @@ function authModeTextUpdate() {
                     .order('updated_at', { ascending: false });
                 
                 if(error) throw error;
-                problemsCache = data; // تحديث الذاكرة فوراً
+                problemsCache = data; // تحديث الذاكرة فوراً بالبيانات الحية
 
-                // 3. محاولة الحفظ في الكاش (في صندوق آمن حتى لا يوقف النظام إذا منعه المتصفح)
-                try {
-                    await localforage.setItem(`salik_kb_cache_${currentLang}`, data);
-                } catch(cacheError) {
-                    console.warn("تم منع حفظ الكاش من قبل المتصفح، ولكن النظام سيستمر بالعمل بشكل طبيعي.");
-                }
-
-                // 4. تحديث الواجهة بالبيانات الجديدة بأمان تام
+                // تحديث الشاشة النشطة اللحظية لترى تعديلك أمام عينك فوراً
                 await refreshActiveScreen();
                 loadNotifications();
                 loadNewsTicker();
@@ -1782,7 +1787,7 @@ function authModeTextUpdate() {
             } catch(e) {
                 console.error("حدث خطأ أثناء الاتصال بالسيرفر:", e);
             } finally {
-                hideLoader();
+                hideLoader(); // إخفاء شاشة التحميل
             }
         }
 
@@ -1961,12 +1966,19 @@ function renderProblems(problems, containerId = 'problems-container') {
 		
 		
 			
-        async function approveCurrentProblem() {
+async function approveCurrentProblem() {
             if(!currentlyViewingProb || currentUser.role !== 'moderator') return;
             await supabase.from('kb_problems').update({ status: 'active' }).eq('id', currentlyViewingProb.id);
-			logAction('موافقة ونشر', 'موضوع', `تم اعتماد ونشر موضوع: ${currentlyViewingProb.title}`);
+            logAction('موافقة ونشر', 'موضوع', `تم اعتماد ونشر موضوع: ${currentlyViewingProb.title}`);
+            
+            // 🚀 التعديل اللحظي لحالة الموضوع في الرام
+            const index = problemsCache.findIndex(p => p.id === currentlyViewingProb.id);
+            if(index > -1) problemsCache[index].status = 'active';
+
             alert('تمت الموافقة وتم النشر للوكلاء!');
-            closeModal('modal-view'); fetchProblems();
+            closeModal('modal-view'); 
+            // تحديث الشاشة لتختفي شارة (قيد الانتظار)
+            refreshActiveScreen();
         }
 		
         async function editCurrentProblem() {
@@ -2003,16 +2015,18 @@ function renderProblems(problems, containerId = 'problems-container') {
             try {
                 if(probId) {
                     await supabase.from('kb_problems').delete().eq('id', probId);
-					logAction('حذف', 'موضوع', `تم حذف موضوع: ${currentlyViewingProb.title}`);
+                    logAction('حذف', 'موضوع', `تم حذف موضوع: ${currentlyViewingProb.title}`);
+                    
+                    // 🚀 الحذف اللحظي من مصفوفة الرام
+                    problemsCache = problemsCache.filter(p => p.id !== probId);
                 }
             } catch(e) {
-                let probs = JSON.parse(localStorage.getItem('local_problems') || '[]');
-                probs = probs.filter(p => p.id !== probId);
-                localStorage.setItem('local_problems', JSON.stringify(probs));
+                console.error("خطأ في الحذف", e);
             }
             
             closeModal('modal-view');
-            fetchProblems();
+            // تحديث الشاشة فوراً لتعكس الحذف
+            refreshActiveScreen();
         }
 
 // ==========================================
@@ -3398,7 +3412,17 @@ function searchGlobal() {
             loadNewsTicker(); // تحديث شاشتي
         }
 		
-        // Initialize App
+        // ==========================================
+        // Initialize App & Restore Session (استعادة الجلسة)
+        // ==========================================
+        const savedSession = localStorage.getItem('salik_active_user');
+        if (savedSession) {
+            try {
+                currentUser = JSON.parse(savedSession);
+                loginSuccess(true); // true = استعادة الجلسة بدون تسجيل حدث جديد
+            } catch(e) {}
+        }
+        
         fetchProblems();
     </script>
 </body>
