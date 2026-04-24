@@ -472,35 +472,35 @@
 </head>
 <body>
 
-<div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-gradient); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease;">
-        <div class="loader"></div>
-        <h2 style="color: var(--primary); margin-top: 20px; font-weight: bold;">جارِ تحميل قاعدة البيانات...</h2>
+<div id="loading-screen" style="position: fixed; bottom: 20px; right: 20px; background: var(--glass-bg); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--glass-border); z-index: 9999; display: flex; align-items: center; gap: 10px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;">
+        <i class="fas fa-circle-notch fa-spin" style="color: var(--primary); font-size: 1.2rem;"></i>
+        <span style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">جارِ المزامنة اللحظية...</span>
     </div>
 	
     <!-- Sidebar -->
     <aside class="sidebar glass">
         <div class="logo" style="font-size: 1.2rem;">المساعد الذكي - سالك</div>
         
-<div class="nav-item hidden" id="nav-dashboard" onclick="showSection('dashboard', this); loadDashboardStats();">
+        <div class="nav-item hidden" id="nav-dashboard" onclick="showSection('dashboard', this); loadDashboardStats();">
             <i class="fas fa-chart-pie"></i> <span class="txt-dashboard">لوحة التحكم</span>
         </div>
         <div class="nav-item hidden" id="nav-users" onclick="showSection('users', this); loadUsersManagement();">
-            <i class="fas fa-users-cog"></i> <span>إدارة الوكلاء</span>
+            <i class="fas fa-users-cog"></i> <span class="txt-users">إدارة الوكلاء</span>
         </div>
 		<div class="nav-item hidden" id="nav-audit" onclick="showSection('audit', this); loadAuditLogs();">
-            <i class="fas fa-history"></i> <span>سجل التعديلات</span>
+            <i class="fas fa-history"></i> <span class="txt-audit">سجل التعديلات</span>
         </div>
         <div class="nav-item active" onclick="showSection('home', this)">
             <i class="fas fa-home"></i> <span class="txt-home">الرئيسية</span>
         </div>
 		<div class="nav-item" id="nav-all-cats" onclick="showSection('all-cats', this); loadAllCategories();">
-            <i class="fas fa-th-list"></i> <span>جميع الأقسام</span>
+            <i class="fas fa-th-list"></i> <span class="txt-all-cats">جميع الأقسام</span>
         </div>
 		<div class="nav-item hidden" id="nav-chat" onclick="showSection('chat', this); initChat();">
-            <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> <span>الشات والتواصل</span>
+            <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> <span class="txt-chat">الشات والتواصل</span>
         </div>
         <div class="nav-item hidden" id="nav-tickets" onclick="showSection('tickets', this); loadTickets();">
-            <i class="fas fa-ticket-alt"></i> <span>التذاكر والدعم</span>
+            <i class="fas fa-ticket-alt"></i> <span class="txt-tickets">التذاكر والدعم</span>
         </div>
         <div class="nav-item" onclick="showSection('notes', this)">
             <i class="fas fa-book"></i> <span class="txt-notes">ملاحظاتي الدائمة</span>
@@ -509,17 +509,17 @@
             <i class="fas fa-star"></i> <span class="txt-bookmarks">مفضلتي</span>
         </div>
         <div class="nav-item" onclick="openQuickNoteModal()" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
-            <i class="fas fa-bolt"></i> <span>النوتة السريعة</span>
+            <i class="fas fa-bolt"></i> <span class="txt-quick-note">النوتة السريعة</span>
         </div>
         
         <div style="margin-top: auto;">
 		<div class="nav-item" id="nav-honor" onclick="showSection('honor', this); loadHonorBoard();" style="color: #f59e0b;">
-                <i class="fas fa-award"></i> <span>لوحة الشرف</span>
+                <i class="fas fa-award"></i> <span class="txt-honor">لوحة الشرف</span>
             </div>
             <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 10px 0;">
             <div style="margin-top: auto;">
             <div class="nav-item hidden" onclick="changeMyPassword()" id="btn-change-pass" style="color: var(--primary);">
-                <i class="fas fa-key"></i> <span>تغيير كلمة المرور</span>
+                <i class="fas fa-key"></i> <span class="txt-change-pass">تغيير كلمة المرور</span>
             </div>
             <div class="nav-item text-danger" onclick="logout()" id="btn-logout" style="display:none;">
                 <i class="fas fa-sign-out-alt"></i> <span class="txt-logout">تسجيل خروج</span>
@@ -565,10 +565,14 @@
                 </div>
 
                 <span id="user-display">زائر / Guest</span>
-                <button class="btn btn-primary hidden" id="btn-add-problem" onclick="openAddProblemModal()">
-                    <i class="fas fa-plus"></i> <span class="txt-add-prob">إضافة مشكلة</span>
+                
+                <button class="btn btn-danger hidden" id="btn-add-news" onclick="openNewsModal()" style="background: linear-gradient(45deg, #ef4444, #f59e0b); border: none; margin-inline-start: 10px;">
+                    <i class="fas fa-bullhorn"></i> <span class="txt-add-news">بث خبر عاجل</span>
                 </button>
-            </div>
+                
+                <button class="btn btn-primary hidden" id="btn-add-problem" onclick="openAddProblemModal()" style="margin-inline-start: 10px;">
+                    <i class="fas fa-plus"></i> <span class="txt-add-prob">إضافة موضوع</span>
+                </button>
         </header>
 		
 		
@@ -726,7 +730,7 @@
         <!-- Home Section (Problems) -->
         <section id="sec-home">
             <div class="home-header">
-                <h2 class="home-title">المساعد الذكي - سالك</h2>
+                <h2 class="home-title txt-main-title">المساعد الذكي - سالك</h2>
                 <div class="filter-bar" style="max-width: 800px; margin: 0 auto; box-shadow: var(--glass-shadow); display: flex;">
                     <i class="fas fa-search" style="color: var(--text-muted);"></i>
                     <input type="text" id="global-search" placeholder="ابحث عن مشكلة أو إجراء..." style="border:none; background:transparent; width:100%; outline:none; font-size:1rem; font-family:inherit; font-weight:bold;" onkeyup="searchGlobal()">
@@ -734,19 +738,20 @@
                         <option value="">تصفح الأقسام...</option>
                     </select>
                 </div>
+            </div>
 
             <div id="home-default-content">
-                <div class="section-title"><i class="fas fa-th-large" style="color: var(--primary);"></i> التقسيمات الرئيسية</div>
+                <div class="section-title"><i class="fas fa-th-large" style="color: var(--primary);"></i> <span class="txt-main-sections">التقسيمات الرئيسية</span></div>
                 <div class="bento-categories" id="home-categories">
                     </div>
 
-                <div class="section-title" style="margin-top: 30px;"><i class="fas fa-fire" style="color: #f59e0b;"></i> الإجراءات الأكثر طلبًا</div>
+                <div class="section-title" style="margin-top: 30px;"><i class="fas fa-fire" style="color: #f59e0b;"></i> <span class="txt-trending-procs">الإجراءات الأكثر طلبًا</span></div>
                 <div class="trending-grid" id="home-trending">
                     </div>
             </div>
 
             <div id="search-results-section" class="hidden" style="margin-top: 40px;">
-                <div class="section-title"><i class="fas fa-list"></i> قائمة النتائج</div>
+                <div class="section-title"><i class="fas fa-list"></i> <span class="txt-search-results">قائمة النتائج</span></div>
                 <div class="problems-grid" id="problems-container"></div>
             </div>
         </section>
@@ -1163,22 +1168,44 @@
         let currentlyViewingProb = null; // تعديل جذري لضمان قراءة المشكلة الصحيحة
 
         // Translation Dictionary
+        // Translation Dictionary (مُحدث بالكامل)
+        // Translation Dictionary (مُحدث بالكامل)
         const translations = {
             ar: {
                 home: "الرئيسية", notes: "ملاحظاتي الدائمة", login: "تسجيل الدخول", logout: "تسجيل خروج",
-                addProb: "إضافة مشكلة", kbTitle: "قاعدة المعرفة", notesTitle: "ملاحظاتي الدائمة (تُحفظ تلقائياً)",
+                addProb: "إضافة موضوع", kbTitle: "قاعدة المعرفة", notesTitle: "ملاحظاتي الدائمة (تُحفظ تلقائياً)",
                 username: "اسم المستخدم", pass: "كلمة المرور", btnLogin: "دخول", btnReg: "إنشاء حساب",
                 toggleReg: "ليس لديك حساب؟ سجل الآن", toggleLogin: "لديك حساب بالفعل؟ دخول",
                 modalAddTitle: "إضافة/تعديل موضوع", probTitle: "العنوان", probContent: "المحتوى والحل",
-                save: "حفظ", guest: "زائر", admin: "أدمن", user: "مستخدم", maxUpload: "عذراً! أقصى حجم للملف هو 2 ميجابايت."
+                save: "حفظ", guest: "زائر", admin: "أدمن", user: "مستخدم", maxUpload: "عذراً! أقصى حجم للملف هو 2 ميجابايت.",
+                dashboard: "لوحة التحكم", users: "إدارة الوكلاء", audit: "سجل التعديلات", allCats: "جميع الأقسام",
+                chat: "الشات والتواصل", tickets: "التذاكر والدعم", bookmarks: "مفضلتي", quickNote: "النوتة السريعة",
+                honor: "لوحة الشرف", changePass: "تغيير كلمة المرور", broadcast: "بث خبر عاجل",
+                statProbs: "إجمالي المواضيع", statUsers: "عدد الوكلاء المسجلين", statLang: "المواضيع (عربي / English)",
+                dashTitle: "لوحة التحكم والإحصائيات",
+                // الإضافات الخاصة بالصفحة الرئيسية
+                searchPlaceholder: "ابحث عن مشكلة أو إجراء...", browseCats: "تصفح الأقسام...",
+                mainSections: "التقسيمات الرئيسية", trendingProcs: "الإجراءات الأكثر طلبًا",
+                searchResults: "قائمة النتائج", mainTitle: "المساعد الذكي - سالك",
+                requests: "طلب", editBtn: "تعديل"
             },
             en: {
                 home: "Home", notes: "Permanent Notes", login: "Login", logout: "Logout",
-                addProb: "Add Problem", kbTitle: "Knowledge Base", notesTitle: "Permanent Notes (Auto-saved)",
+                addProb: "Add Topic", kbTitle: "Knowledge Base", notesTitle: "Permanent Notes (Auto-saved)",
                 username: "Username", pass: "Password", btnLogin: "Login", btnReg: "Register",
                 toggleReg: "No account? Register now", toggleLogin: "Have an account? Login",
                 modalAddTitle: "Add/Edit Topic", probTitle: "Title", probContent: "Content & Solution",
-                save: "Save", guest: "Guest", admin: "Admin", user: "User", maxUpload: "Sorry! Max file size is 2MB."
+                save: "Save", guest: "Guest", admin: "Admin", user: "User", maxUpload: "Sorry! Max file size is 2MB.",
+                dashboard: "Dashboard", users: "Manage Agents", audit: "Audit Log", allCats: "All Categories",
+                chat: "Chat & Comm", tickets: "Tickets & Support", bookmarks: "Bookmarks", quickNote: "Quick Note",
+                honor: "Honor Board", changePass: "Change Password", broadcast: "Broadcast News",
+                statProbs: "Total Topics", statUsers: "Registered Agents", statLang: "Topics (Ar / En)",
+                dashTitle: "Dashboard & Statistics",
+                // الإضافات الخاصة بالصفحة الرئيسية
+                searchPlaceholder: "Search for a problem or procedure...", browseCats: "Browse Categories...",
+                mainSections: "Main Categories", trendingProcs: "Most Requested Procedures",
+                searchResults: "Search Results", mainTitle: "Salik Smart Assistant",
+                requests: "requests", editBtn: "Edit"
             }
         };
 
@@ -1194,15 +1221,17 @@
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             if(element) element.classList.add('active');
 
-            // Apply Translations Safely (بدون أخطاء لو العنصر مش موجود)
+            // Apply Translations Safely
             const t = translations[lang];
             const safeSet = (cls, txt) => { const el = document.querySelector(cls); if(el) el.innerText = txt; };
+            // دالة لتغيير كل العناصر اللي واخدة نفس الكلاس (عشان لو الكلمة متكررة)
+            const safeSetAll = (cls, txt) => { document.querySelectorAll(cls).forEach(el => el.innerText = txt); };
 
             safeSet('.txt-home', t.home);
             safeSet('.txt-notes', t.notes);
             safeSet('.txt-login', t.login);
             safeSet('.txt-logout', t.logout);
-            safeSet('.txt-add-prob', t.addProb);
+            safeSetAll('.txt-add-prob', t.addProb); // عشان زرار إضافة موضوع متكرر
             safeSet('.txt-kb-title', t.kbTitle);
             safeSet('.txt-notes-title', t.notesTitle);
             safeSet('.txt-username', t.username);
@@ -1212,9 +1241,37 @@
             safeSet('.txt-prob-content', t.probContent);
             safeSet('.txt-save', t.save);
             
+            // الإضافات الجديدة
+            safeSet('.txt-dashboard', t.dashboard);
+            safeSet('.txt-users', t.users);
+            safeSet('.txt-audit', t.audit);
+            safeSet('.txt-all-cats', t.allCats);
+            safeSet('.txt-chat', t.chat);
+            safeSet('.txt-tickets', t.tickets);
+            safeSet('.txt-bookmarks', t.bookmarks);
+            safeSet('.txt-quick-note', t.quickNote);
+            safeSet('.txt-honor', t.honor);
+            safeSet('.txt-change-pass', t.changePass);
+            safeSet('.txt-add-news', t.broadcast);
+            
+            safeSet('.txt-stat-probs', t.statProbs);
+            safeSet('.txt-stat-users', t.statUsers);
+            safeSet('.txt-stat-lang', t.statLang);
+            safeSet('.txt-dashboard-title', t.dashTitle);
+// ترجمة الصفحة الرئيسية
+            safeSet('.txt-main-title', t.mainTitle);
+            safeSet('.txt-main-sections', t.mainSections);
+            safeSet('.txt-trending-procs', t.trendingProcs);
+            safeSet('.txt-search-results', t.searchResults);
+            safeSet('.txt-edit-btn', t.editBtn);
+            
+            // ترجمة مربع البحث (Placeholder)
+            const searchInput = document.getElementById('global-search');
+            if(searchInput) searchInput.placeholder = t.searchPlaceholder;
+
             authModeTextUpdate();
             updateUserDisplay();
-            fetchProblems(); // Fetch problems specific to this language
+            fetchProblems(true); // جلب المواضيع الخاصة باللغة وتخطي الكاش
         }
 
         function showSection(sec, element) {
@@ -1371,6 +1428,7 @@ function authModeTextUpdate() {
             
             if(currentUser.role === 'admin' || currentUser.role === 'moderator') {
                 document.getElementById('btn-add-problem').classList.remove('hidden');
+				document.getElementById('btn-add-news').classList.remove('hidden');
                 document.getElementById('nav-dashboard').classList.remove('hidden'); 
                 document.getElementById('nav-users').classList.remove('hidden'); 
                 if(currentUser.role === 'moderator') {
@@ -1394,6 +1452,7 @@ function authModeTextUpdate() {
             document.getElementById('btn-login-nav').style.display = 'flex';
             document.getElementById('btn-logout').style.display = 'none';
             document.getElementById('btn-add-problem').classList.add('hidden');
+			document.getElementById('btn-add-news').classList.add('hidden');
             document.getElementById('nav-dashboard').classList.add('hidden'); 
             document.getElementById('nav-users').classList.add('hidden'); 
             document.getElementById('nav-audit').classList.add('hidden');
@@ -1758,10 +1817,10 @@ function authModeTextUpdate() {
         }
 
         // ==========================================
-        // الدالة الرئيسية المعدلة (مباشرة وبدون كاش نهائياً - التعديل لحظي)
+        // الدالة الرئيسية المعدلة (مضادة لانقطاع الإنترنت والجدران النارية)
         // ==========================================
-        async function fetchProblems() {
-            // إظهار شاشة التحميل بشكل خفيف كدليل للوكيل أنه يتم تحديث البيانات
+        async function fetchProblems(skipCache = false, retryCount = 3) {
+            // إظهار شاشة التحميل بشكل خفيف
             const loaderScreen = document.getElementById('loading-screen');
             if(loaderScreen) {
                 loaderScreen.style.display = 'flex';
@@ -1769,7 +1828,7 @@ function authModeTextUpdate() {
             }
 
             try {
-                // الجلب المباشر والحي من قاعدة البيانات دائماً وأبداً
+                // محاولة الجلب من قاعدة البيانات
                 const { data, error } = await supabase
                     .from('kb_problems')
                     .select('*')
@@ -1777,6 +1836,7 @@ function authModeTextUpdate() {
                     .order('updated_at', { ascending: false });
                 
                 if(error) throw error;
+                
                 problemsCache = data; // تحديث الذاكرة فوراً بالبيانات الحية
 
                 // تحديث الشاشة النشطة اللحظية لترى تعديلك أمام عينك فوراً
@@ -1784,10 +1844,29 @@ function authModeTextUpdate() {
                 loadNotifications();
                 loadNewsTicker();
 
+                hideLoader(); // نجح الاتصال، قم بإخفاء التحميل
+
             } catch(e) {
                 console.error("حدث خطأ أثناء الاتصال بالسيرفر:", e);
-            } finally {
-                hideLoader(); // إخفاء شاشة التحميل
+                
+                // إذا فشل الاتصال، نحاول مرة أخرى 3 مرات قبل الاستسلام
+                if (retryCount > 0) {
+                    console.warn(`فشل الاتصال بالسيرفر.. سنحاول مجدداً. المحاولات المتبقية: ${retryCount}`);
+                    // الانتظار ثانيتين ثم المحاولة مجدداً
+                    setTimeout(() => {
+                        fetchProblems(skipCache, retryCount - 1);
+                    }, 2000);
+                } else {
+                    hideLoader();
+                    // تنبيه الوكيل بأن هناك مشكلة في شبكته
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'مشكلة في الشبكة',
+                        text: 'لم نتمكن من جلب التحديثات من السيرفر. يرجى التأكد من اتصالك بالإنترنت أو أن جدار حماية الشركة (Firewall) لا يمنع الاتصال.',
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#2563eb'
+                    });
+                }
             }
         }
 
@@ -2258,12 +2337,31 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
         async function viewUserData(id, username) {
             document.getElementById('view-user-data-title').innerText = `بيانات الوكيل: ${username}`;
             
-            // جلب الملاحظات
+            // جلب الملاحظات وفك تشفيرها من صيغة JSON إلى نص مقروء
             const { data: userData } = await supabase.from('app_users').select('notes').eq('id', id).single();
-            document.getElementById('view-user-notes').value = userData?.notes || 'لا توجد ملاحظات.';
+            
+            let displayNotes = 'لا توجد ملاحظات.';
+            if (userData && userData.notes) {
+                const parsedNotes = parseNotesData(userData.notes);
+                displayNotes = '';
+                
+                if (parsedNotes.main) {
+                    displayNotes += "📝 المسودة الأساسية:\n" + parsedNotes.main + "\n\n";
+                }
+                if (parsedNotes.sticky && parsedNotes.sticky.length > 0) {
+                    displayNotes += "📌 الملاحظات المثبتة:\n";
+                    parsedNotes.sticky.forEach((note, index) => {
+                        displayNotes += `${index + 1}- ${note.text}\n\n`;
+                    });
+                }
+                if(displayNotes === '') displayNotes = 'لا توجد ملاحظات.';
+            }
+            
+            document.getElementById('view-user-notes').value = displayNotes;
 
             // جلب الملفات
             const { data: filesData } = await supabase.from('user_files').select('*').eq('user_id', id);
+            // ... (باقي كود الدالة كما هو بدون تغيير)
             const filesContainer = document.getElementById('view-user-files');
             filesContainer.innerHTML = '';
             
@@ -2346,7 +2444,7 @@ function openForgotPassword() { closeModal('modal-auth'); openModal('modal-forgo
                 // تعبئة قائمة التصفح المجاورة للبحث
                 const filterSelect = document.getElementById('filter-category');
                 if(filterSelect) {
-                    filterSelect.innerHTML = '<option value="">تصفح الأقسام...</option>';
+                    filterSelect.innerHTML = `<option value="">${translations[currentLang].browseCats}</option>`;
                     cats.forEach(c => filterSelect.innerHTML += `<option value="${c.id}">${currentLang === 'ar' ? c.name_ar : c.name_en}</option>`);
                 }
 
@@ -2397,7 +2495,7 @@ topProbs = topProbs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
                     trendContainer.innerHTML += `
                         <div class="trending-card" onclick='viewProblemById("${p.id}")'>
                             <div style="font-weight: bold; color: var(--text-dark); font-size: 1.1rem;">${p.sub_procedure || p.title}</div>
-                            <div class="views-badge"><i class="fas fa-fire" style="color: #f59e0b;"></i> ${p.views || 0} طلب</div>
+                            <div class="views-badge"><i class="fas fa-fire" style="color: #f59e0b;"></i> ${p.views || 0} ${translations[currentLang].requests}</div>
                         </div>
                     `;
                 });
@@ -2892,6 +2990,9 @@ function searchGlobal() {
         // 11. NOTIFICATIONS SYSTEM (نظام الإشعارات)
         // ==========================================
         function loadNotifications() {
+            // 🚀 السر هنا: ترتيب المصفوفة تنازلياً حسب الوقت لكي يقفز التعديل الجديد أو الإضافة لأعلى القائمة
+            problemsCache.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
             // أخذ أحدث 10 مواضيع مفعلة فقط
             const activeProbs = problemsCache.filter(p => p.status === 'active');
             const topUpdates = activeProbs.slice(0, 10);
