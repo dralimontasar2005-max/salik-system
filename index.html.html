@@ -298,12 +298,15 @@
 		
 		/* ضبط مقاسات الصور داخل شاشة العرض لتناسب الشاشة (Auto-Fit) */
         #view-content img {
-            max-width: 100% !important; /* يمنع الصورة من الخروج برا الشاشة */
-            height: auto !important; /* يحافظ على أبعاد الصورة الأصلية */
+            max-width: 100% !important; 
+            max-height: 400px !important; /* 🚀 السر هنا: منع الصورة من الطول المبالغ فيه */
+            width: auto !important; /* يحافظ على أبعاد الصورة الأصلية بدون تمطيط */
+            object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             margin: 15px auto;
             display: block;
+            cursor: zoom-in; /* الماوس يتحول لعدسة تكبير */
         }
 		
 		/* 1. إجبار المواضيع على استخدام خط الموقع الموحد */
@@ -468,6 +471,7 @@
 		
 	</style>
 	
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">
 	
 </head>
 <body>
@@ -1040,10 +1044,11 @@
                     <div id="call-notes-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
                 
-                <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px;" id="admin-actions" class="hidden">
+                <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;" id="admin-actions" class="hidden">
                     <button class="btn btn-success hidden" id="btn-approve" onclick="approveCurrentProblem()"><i class="fas fa-check"></i> موافقة ونشر</button>
                     <button class="btn btn-primary" id="btn-edit" onclick="editCurrentProblem()"><i class="fas fa-edit"></i> تعديل</button>
                     <button class="btn btn-danger" id="btn-delete" onclick="deleteCurrentProblem()"><i class="fas fa-trash"></i> حذف</button>
+                    <button class="btn hidden" id="btn-transfer-lang" onclick="transferProblemLang()" style="background: #8b5cf6; color: white;"><i class="fas fa-exchange-alt"></i> <span id="txt-transfer-lang">نقل للإنجليزية</span></button>
                 </div>
             </div>
             
@@ -1130,6 +1135,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 
     <!-- Supabase CDN -->
@@ -1166,6 +1172,7 @@
         let problemsCache = [];
 		let categoriesCache = []; // كاش الأقسام لتسريع العرض ومنع التداخل
         let currentlyViewingProb = null; // تعديل جذري لضمان قراءة المشكلة الصحيحة
+		let imageViewer = null; // متغير مكتبة التكبير للصور
 
         // Translation Dictionary
         // Translation Dictionary (مُحدث بالكامل)
@@ -1404,8 +1411,8 @@ function authModeTextUpdate() {
         }
 
         function loginSuccess(isRestore = false) {
-            // السر هنا: حفظ جلسة المستخدم حتى لا يخرج عند عمل ريفريش
-            localStorage.setItem('salik_active_user', JSON.stringify(currentUser));
+            // محاولة الحفظ بأمان (وتجاهل الحظر إذا حدث بسبب المتصفح)
+            try { localStorage.setItem('salik_active_user', JSON.stringify(currentUser)); } catch(e) {}
 
             closeModal('modal-auth');
             document.getElementById('auth-username').value = '';
@@ -1445,8 +1452,8 @@ function authModeTextUpdate() {
         }
 
         function logout() {
-            // مسح الجلسة عند تسجيل الخروج
-            localStorage.removeItem('salik_active_user');
+            // محاولة الحذف بأمان
+            try { localStorage.removeItem('salik_active_user'); } catch(e) {}
             
             currentUser = null;
             document.getElementById('btn-login-nav').style.display = 'flex';
@@ -2005,13 +2012,37 @@ function renderProblems(problems, containerId = 'problems-container') {
             document.getElementById('view-content').innerHTML = prob.content;
             document.getElementById('view-content').setAttribute('dir', prob.lang === 'ar' ? 'rtl' : 'ltr');
 
+            // --- 🚀 تفعيل ميزة تكبير الصور (Zoom & Pan) ---
+            const viewContentDiv = document.getElementById('view-content');
+            if (imageViewer) imageViewer.destroy();
+            setTimeout(() => {
+                imageViewer = new Viewer(viewContentDiv, {
+                    inline: false, button: true, navbar: false, title: false,
+                    toolbar: { zoomIn: 1, zoomOut: 1, oneToOne: 1, reset: 1, prev: 0, play: 0, next: 0, rotateLeft: 1, rotateRight: 1, flipHorizontal: 0, flipVertical: 0 },
+                    tooltip: true, movable: true, zoomable: true, rotatable: true, scalable: true, transition: true, fullscreen: true, keyboard: true
+                });
+            }, 150);
+            // ------------------------------------------------
+
             const actionBlock = document.getElementById('admin-actions');
             const btnApprove = document.getElementById('btn-approve');
             const btnEdit = document.getElementById('btn-edit');
             const btnDelete = document.getElementById('btn-delete');
+            const btnTransfer = document.getElementById('btn-transfer-lang');
 
             if(currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin')) {
                 actionBlock.classList.remove('hidden');
+                
+                // زر نقل اللغة للمدير فقط
+                if(btnTransfer) {
+                    if (currentUser.role === 'moderator') {
+                        btnTransfer.classList.remove('hidden');
+                        document.getElementById('txt-transfer-lang').innerText = prob.lang === 'ar' ? 'نقل للإنجليزية' : 'نقل للعربية';
+                    } else {
+                        btnTransfer.classList.add('hidden');
+                    }
+                }
+
                 if(currentUser.role === 'moderator') {
                     btnDelete.classList.remove('hidden');
                     if(prob.status === 'pending') btnApprove.classList.remove('hidden');
@@ -2025,7 +2056,6 @@ function renderProblems(problems, containerId = 'problems-container') {
             }
             
 			generateTOC(); // توليد الفهرس الجانبي
-			
             openModal('modal-view'); 
 
             // 2. زيادة المشاهدات وتحديث الواجهة
@@ -2037,13 +2067,39 @@ function renderProblems(problems, containerId = 'problems-container') {
                 supabase.from('kb_problems').update({ views: newViews }).eq('id', prob.id).then(() => {
                     loadHomeData(); 
                 });
-
-                // جلب ملاحظات المكالمات (Call Notes) لهذا الموضوع
                 loadCallNotes(prob.id);
             }
         } 
 		
-		
+		async function transferProblemLang() {
+            if(!currentlyViewingProb || currentUser.role !== 'moderator') return;
+            
+            const targetLang = currentlyViewingProb.lang === 'ar' ? 'en' : 'ar';
+            const confirmMsg = targetLang === 'en' 
+                ? "هل أنت متأكد من نقل هذا الموضوع إلى القسم الإنجليزي؟ سيختفي من الواجهة العربية." 
+                : "هل أنت متأكد من نقل هذا الموضوع إلى القسم العربي؟ سيختفي من الواجهة الإنجليزية.";
+            
+            if(!confirm(confirmMsg)) return;
+
+            try {
+                // تعديل اللغة في قاعدة البيانات
+                await supabase.from('kb_problems').update({ lang: targetLang }).eq('id', currentlyViewingProb.id);
+                
+                logAction('نقل', 'موضوع', `تم نقل الموضوع (${currentlyViewingProb.title}) إلى لغة: ${targetLang}`);
+                
+                // حذف من الرام (الكاش) لأن لغته تغيرت ويجب أن يختفي من أمامي الآن
+                problemsCache = problemsCache.filter(p => p.id !== currentlyViewingProb.id);
+                
+                closeModal('modal-view');
+                Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم النقل بنجاح!', showConfirmButton:false, timer:2000});
+                
+                // تحديث الشاشة ليختفي من لغتي الحالية
+                refreshActiveScreen();
+            } catch(e) {
+                console.error("خطأ في النقل", e);
+                alert("حدث خطأ أثناء النقل.");
+            }
+        }
 			
 async function approveCurrentProblem() {
             if(!currentlyViewingProb || currentUser.role !== 'moderator') return;
@@ -3009,7 +3065,9 @@ function searchGlobal() {
 
             let hasNew = false;
             // جلب تاريخ آخر مرة فتح فيها المستخدم الجرس من المتصفح
-            const lastSeen = localStorage.getItem('last_seen_notif') || '2000-01-01T00:00:00.000Z';
+            // جلب تاريخ آخر مرة فتح فيها المستخدم الجرس من المتصفح
+            let lastSeen = '2000-01-01T00:00:00.000Z';
+            try { lastSeen = localStorage.getItem('last_seen_notif') || lastSeen; } catch(e) {}
 
             topUpdates.forEach(p => {
                 const date = new Date(p.updated_at);
@@ -3041,8 +3099,8 @@ function searchGlobal() {
                 panel.style.display = 'none';
             } else {
                 panel.style.display = 'flex';
-                // تحديث وقت "آخر مشاهدة" للوقت الحالي
-                localStorage.setItem('last_seen_notif', new Date().toISOString());
+                // تحديث وقت "آخر مشاهدة" بأمان
+                try { localStorage.setItem('last_seen_notif', new Date().toISOString()); } catch(e) {}
                 badge.style.display = 'none'; // إخفاء النقطة الحمراء فوراً
                 
                 // إخفاء كلمة "جديد" من القائمة بعد ثانيتين كحركة جمالية
@@ -3514,14 +3572,16 @@ function searchGlobal() {
         }
 		
         // ==========================================
-        // Initialize App & Restore Session (استعادة الجلسة)
+        // Initialize App & Restore Session (استعادة الجلسة بأمان)
         // ==========================================
-        const savedSession = localStorage.getItem('salik_active_user');
-        if (savedSession) {
-            try {
+        try {
+            const savedSession = localStorage.getItem('salik_active_user');
+            if (savedSession) {
                 currentUser = JSON.parse(savedSession);
-                loginSuccess(true); // true = استعادة الجلسة بدون تسجيل حدث جديد
-            } catch(e) {}
+                loginSuccess(true); // استعادة الجلسة
+            }
+        } catch(e) {
+            console.warn("تم منع الوصول للذاكرة بسبب حماية المتصفح، سيتم العمل بالذاكرة المؤقتة.");
         }
         
         fetchProblems();
