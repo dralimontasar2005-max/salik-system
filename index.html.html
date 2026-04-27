@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -494,6 +492,25 @@
         }
         html[dir="ltr"] #news-ticker-text { direction: ltr; }
 		
+		/* تنسيقات الشات الجديدة */
+.chat-search-bar { padding: 10px; background: #f0f2f5; border-bottom: 1px solid #e1e8ed; display: flex; gap: 10px; }
+.chat-search-input { flex: 1; padding: 8px 15px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+.online-indicator { width: 10px; height: 10px; background: var(--success); border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+/* فواصل الأيام */
+.chat-date-divider { text-align: center; margin: 15px 0; }
+.chat-date-divider span { background: #e1e8ed; color: #54656f; padding: 5px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+/* الرسائل المحذوفة والردود */
+.bubble.deleted { font-style: italic; color: #8b9bb4; background: #f8fafc; border: 1px dashed #cbd5e1; }
+.msg-reply-box { background: rgba(0,0,0,0.05); border-right: 4px solid var(--primary); padding: 5px 10px; margin-bottom: 5px; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+html[dir="ltr"] .msg-reply-box { border-right: none; border-left: 4px solid var(--primary); }
+.msg-actions { position: absolute; top: 5px; left: 5px; opacity: 0; transition: 0.2s; background: rgba(255,255,255,0.9); border-radius: 4px; padding: 2px 5px; cursor: pointer; }
+html[dir="ltr"] .msg-actions { left: auto; right: 5px; }
+.bubble:hover .msg-actions { opacity: 1; }
+
+
+		
 	</style>
 	
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">
@@ -811,27 +828,60 @@
             <div class="bento-categories" id="all-categories-container"></div>
         </section>
 		<section id="sec-chat" class="hidden">
-            <div class="chat-layout">
-                <div class="chat-sidebar">
-                    <div class="chat-header"><i class="fas fa-comments"></i> المحادثات والمجموعات</div>
-                    <div class="contact-list" id="chat-contacts">
-                        </div>
-                </div>
-                <div class="chat-main">
-                    <div class="chat-header" id="chat-active-name" style="background: #f0f2f5;">اختر محادثة للبدء...</div>
-                    <div class="chat-messages" id="chat-messages">
-                        </div>
-                    <div class="chat-input-area hidden" id="chat-input-container" style="position: relative;">
-                        <emoji-picker id="chat-emoji-picker" class="hidden" style="position: absolute; bottom: 60px; right: 20px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; --indicator-color: var(--primary);"></emoji-picker>
-
-                        <button class="chat-send-btn" title="إدراج إيموجي" id="btn-toggle-emoji" onclick="toggleEmojiPicker(event)">😀</button>
-                        <input type="text" id="chat-input-msg" class="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
-                        <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </div>
+    <div class="chat-layout">
+        <div class="chat-sidebar">
+            <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-comments"></i> المحادثات</span>
+                <button class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="openCreateGroupModal()" title="إنشاء مجموعة جديدة"><i class="fas fa-users"></i> +</button>
             </div>
-        </section>
+            
+            <div class="chat-search-bar">
+                <input type="text" id="chat-user-search" class="chat-search-input" placeholder="ابحث عن وكيل..." onkeyup="filterChatContacts()">
+            </div>
 
+            <div class="contact-list" id="chat-contacts"></div>
+        </div>
+        
+        <div class="chat-main">
+            <div class="chat-header" id="chat-active-name" style="background: #f0f2f5;">اختر محادثة للبدء...</div>
+            <div class="chat-messages" id="chat-messages"></div>
+            
+            <div id="replying-to-container" class="hidden" style="background: #e2e8f0; padding: 10px 20px; border-right: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: center;">
+                <div id="replying-to-text" style="font-size: 0.9rem; color: #334155;"></div>
+                <i class="fas fa-times" style="cursor: pointer; color: var(--danger);" onclick="cancelReply()"></i>
+            </div>
+            <input type="hidden" id="reply-to-msg-id">
+
+            <div class="chat-input-area hidden" id="chat-input-container" style="position: relative;">
+                <button class="chat-send-btn" title="إرفاق ملف" onclick="document.getElementById('chat-media-upload').click()"><i class="fas fa-paperclip"></i></button>
+                <input type="file" id="chat-media-upload" class="hidden" accept="image/*,.pdf" onchange="uploadChatMedia(this)">
+                
+                <emoji-picker id="chat-emoji-picker" class="hidden" style="position: absolute; bottom: 60px; right: 20px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; --indicator-color: var(--primary);"></emoji-picker>
+                <button class="chat-send-btn" id="btn-toggle-emoji" onclick="toggleEmojiPicker(event)">😀</button>
+                
+                <input type="text" id="chat-input-msg" class="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal-overlay" id="modal-create-group" style="z-index: 10050;">
+    <div class="modal modal-sm glass">
+        <i class="fas fa-times close-modal" onclick="closeModal('modal-create-group')"></i>
+        <h2 style="margin-bottom: 20px; color: var(--primary);"><i class="fas fa-users"></i> إنشاء مجموعة جديدة</h2>
+        <div class="form-group">
+            <label>اسم المجموعة</label>
+            <input type="text" id="new-group-name" class="form-control" placeholder="مثال: فريق الجودة">
+        </div>
+        <div class="form-group">
+            <label>اختر الأعضاء (يجب اختيار 2 على الأقل)</label>
+            <div id="group-members-list" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px;">
+                </div>
+        </div>
+        <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="createChatGroup()">إنشاء المجموعة</button>
+    </div>
+</div>
         <section id="sec-tickets" class="hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="color: var(--primary);"><i class="fas fa-ticket-alt"></i> نظام الدعم والتصعيد</h2>
@@ -3240,76 +3290,122 @@ function searchGlobal() {
         }
 
         // ==========================================
-        // 13. WHATSAPP CLONE (الشات الداخلي)
+        // 13. WHATSAPP CLONE (الشات الداخلي) المحدث
         // ==========================================
         let activeChatReceiver = null;
         let chatRealtimeInterval = null;
+        let allUsersCache = []; 
+        let isCurrentChatGroup = false;
 
+        // 1. تهيئة الشات والمجموعات
         async function initChat() {
             if(!currentUser) return;
             const contactList = document.getElementById('chat-contacts');
             contactList.innerHTML = '';
 
-            // 1. إضافة مجموعة التعميمات (Channel)
-            contactList.innerHTML += `
-                <div class="contact-item" onclick="openChat('channel_general', '📢 مجموعة التعميمات والإعلانات')">
+            const { data: users } = await supabase.from('app_users').select('username, last_seen').neq('username', currentUser.username);
+            if(users) allUsersCache = users;
+
+            // جلب المجموعات الخاصة التي يتواجد بها الوكيل
+            const { data: myGroups } = await supabase.from('chat_group_members').select('group_id, chat_groups(name)').eq('username', currentUser.username);
+
+            let contactsHtml = `
+                <div class="contact-item" onclick="openChat('channel_general', '📢 مجموعة التعميمات والإعلانات', true)">
                     <div class="contact-avatar" style="background:#d1fae5; color:#059669;"><i class="fas fa-bullhorn"></i></div>
                     <div class="contact-name">📢 التعميمات (الجميع)</div>
                 </div>
             `;
 
-            // 2. جلب جميع الوكلاء من الداتا بيس
-            const { data: users } = await supabase.from('app_users').select('username').neq('username', currentUser.username);
-            if(users) {
-                users.forEach(u => {
-                    contactList.innerHTML += `
-                        <div class="contact-item" onclick="openChat('${u.username}', '${u.username}')">
+            if(myGroups) {
+                myGroups.forEach(g => {
+                    if(g.chat_groups) {
+                        contactsHtml += `
+                            <div class="contact-item" onclick="openChat('${g.group_id}', '👥 ${g.chat_groups.name}', true)">
+                                <div class="contact-avatar" style="background:#e0e7ff; color:#4f46e5;"><i class="fas fa-users"></i></div>
+                                <div class="contact-name">👥 ${g.chat_groups.name}</div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            if(currentUser.role === 'admin' || currentUser.role === 'moderator') {
+                allUsersCache.forEach(u => {
+                    const isOnline = u.last_seen && (new Date() - new Date(u.last_seen)) < 300000; 
+                    const onlineDot = isOnline ? '<span class="online-indicator"></span>' : '';
+                    contactsHtml += `
+                        <div class="contact-item user-contact" onclick="openChat('${u.username}', '${u.username}', false)">
                             <div class="contact-avatar"><i class="fas fa-user"></i></div>
-                            <div class="contact-name">${u.username}</div>
+                            <div class="contact-name">${onlineDot} ${u.username}</div>
                         </div>
                     `;
                 });
             }
 
-            // الاستماع الحي للرسائل الجديدة (Realtime)
+            contactList.innerHTML = contactsHtml;
+            
             if(!chatRealtimeInterval) {
                 supabase.channel('chat_room')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
                     const msg = payload.new;
-                    // إذا كانت الرسالة لي، أو للمجموعة، أو مرسلة مني
-                    if(msg.receiver === currentUser.username || msg.receiver === 'channel_general' || msg.sender === currentUser.username) {
-                        // وإذا كنت فاتح نفس المحادثة الآن، ارسمها فوراً!
+                    if(msg.receiver === currentUser.username || msg.receiver === 'channel_general' || msg.sender === currentUser.username || msg.receiver === activeChatReceiver || myGroups?.some(g => g.group_id === msg.receiver)) {
                         if(activeChatReceiver === msg.receiver || (msg.receiver === currentUser.username && activeChatReceiver === msg.sender)) {
                             appendMessageUI(msg);
                             scrollToChatBottom();
-							
-							if (msg.receiver === 'broadcast_news') {
-                        loadNewsTicker(); // تحديث شريط الأخبار فوراً لكل الوكلاء بدون ريفريش
-                        return;
-                    }
                         } else {
-                            // تنبيه بسيط
-                            document.getElementById('nav-chat').style.color = 'var(--danger)'; // لفت الانتباه
+                            document.getElementById('nav-chat').style.color = 'var(--danger)';
                         }
                     }
-                }).subscribe();
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, payload => {
+                    if(payload.new.is_deleted_for_everyone) {
+                        const msgEl = document.getElementById(`msg-${payload.new.id}`);
+                        if(msgEl) {
+                            msgEl.className = `bubble ${payload.new.sender === currentUser.username ? 'sent' : 'received'} deleted`;
+                            msgEl.innerHTML = `<i class="fas fa-ban"></i> تم حذف هذه الرسالة <span class="bubble-time">${new Date(payload.new.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'})}</span>`;
+                        }
+                    }
+                })
+                .subscribe();
                 chatRealtimeInterval = true;
             }
         }
 
-        async function openChat(receiverId, displayName) {
+        function filterChatContacts() {
+            const query = document.getElementById('chat-user-search').value.toLowerCase().trim();
+            const contactList = document.getElementById('chat-contacts');
+            document.querySelectorAll('.user-contact').forEach(el => el.remove());
+
+            if(query === '' && (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) return; 
+
+            let searchResults = '';
+            allUsersCache.forEach(u => {
+                if(u.username.toLowerCase().includes(query)) {
+                    const isOnline = u.last_seen && (new Date() - new Date(u.last_seen)) < 300000;
+                    const onlineDot = isOnline ? '<span class="online-indicator"></span>' : '';
+                    searchResults += `
+                        <div class="contact-item user-contact" onclick="openChat('${u.username}', '${u.username}', false)">
+                            <div class="contact-avatar"><i class="fas fa-user"></i></div>
+                            <div class="contact-name">${onlineDot} ${u.username}</div>
+                        </div>
+                    `;
+                }
+            });
+            contactList.innerHTML += searchResults;
+        }
+
+        async function openChat(receiverId, displayName, isGroup = false) {
             activeChatReceiver = receiverId;
-            document.getElementById('nav-chat').style.color = ''; // مسح التنبيه
+            isCurrentChatGroup = isGroup;
+            document.getElementById('nav-chat').style.color = ''; 
             document.getElementById('chat-active-name').innerHTML = `<strong>${displayName}</strong>`;
             
-            // إظهار مربع الكتابة (إلا إذا كانت مجموعة التعميمات وأنت لست مدير)
             const inputContainer = document.getElementById('chat-input-container');
             if(receiverId === 'channel_general' && currentUser.role !== 'moderator') {
                 inputContainer.classList.add('hidden');
             } else {
                 inputContainer.classList.remove('hidden');
             }
-
             loadChatMessages();
         }
 
@@ -3320,10 +3416,9 @@ function searchGlobal() {
 
             let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
             
-            if(activeChatReceiver === 'channel_general') {
-                query = query.eq('receiver', 'channel_general');
+            if(isCurrentChatGroup || activeChatReceiver === 'channel_general') {
+                query = query.eq('receiver', activeChatReceiver);
             } else {
-                // جلب المحادثة بيني وبين الطرف الآخر
                 query = query.or(`and(sender.eq.${currentUser.username},receiver.eq.${activeChatReceiver}),and(sender.eq.${activeChatReceiver},receiver.eq.${currentUser.username})`);
             }
 
@@ -3331,7 +3426,27 @@ function searchGlobal() {
             msgContainer.innerHTML = '';
             
             if(msgs) {
-                msgs.forEach(m => appendMessageUI(m));
+                let lastDate = '';
+                msgs.forEach(m => {
+                    if(m.deleted_for && m.deleted_for.includes(currentUser.username)) return; 
+
+                    const msgDateObj = new Date(m.created_at);
+                    const msgDate = msgDateObj.toLocaleDateString('ar-EG');
+                    
+                    if(msgDate !== lastDate) {
+                        let displayDate = msgDate;
+                        const today = new Date().toLocaleDateString('ar-EG');
+                        let yesterdayObj = new Date(); yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+                        const yesterday = yesterdayObj.toLocaleDateString('ar-EG');
+                        
+                        if(msgDate === today) displayDate = 'اليوم';
+                        else if(msgDate === yesterday) displayDate = 'أمس';
+
+                        msgContainer.innerHTML += `<div class="chat-date-divider"><span>${displayDate}</span></div>`;
+                        lastDate = msgDate;
+                    }
+                    appendMessageUI(m);
+                });
                 scrollToChatBottom();
             }
         }
@@ -3342,19 +3457,83 @@ function searchGlobal() {
             const bubbleClass = isMe ? 'sent' : 'received';
             const timeStr = new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
             
-            // إظهار اسم المرسل في المجموعة
-            const senderNameHtml = (!isMe && msg.receiver === 'channel_general') ? `<strong style="font-size:0.8rem; color:#0284c7; display:block; margin-bottom:3px;">${msg.sender}</strong>` : '';
+            const senderNameHtml = (!isMe && (isCurrentChatGroup || msg.receiver === 'channel_general')) ? `<strong style="font-size:0.8rem; color:#0284c7; display:block; margin-bottom:3px;">${msg.sender}</strong>` : '';
             
-            // تحويل الروابط (روابط المواضيع) لتصبح قابلة للضغط
-            let formattedMsg = msg.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#0284c7; text-decoration:underline;">$1</a>');
+            let readReceipt = '';
+            if (isMe) readReceipt = msg.is_read ? '<i class="fas fa-check-double" style="color:#3b82f6; font-size:0.7rem; margin-right:5px;"></i>' : '<i class="fas fa-check" style="color:#94a3b8; font-size:0.7rem; margin-right:5px;"></i>';
 
-            msgContainer.innerHTML += `
-                <div class="bubble ${bubbleClass}">
-                    ${senderNameHtml}
-                    ${formattedMsg}
-                    <span class="bubble-time">${timeStr}</span>
+            const actionMenu = `
+                <div class="msg-actions" onclick="showMsgOptions('${msg.id}', ${isMe})">
+                    <i class="fas fa-chevron-down"></i>
                 </div>
             `;
+
+            if(msg.is_deleted_for_everyone) {
+                msgContainer.innerHTML += `
+                    <div class="bubble ${bubbleClass} deleted" id="msg-${msg.id}">
+                        ${senderNameHtml}
+                        <i class="fas fa-ban"></i> تم حذف هذه الرسالة
+                        <span class="bubble-time">${timeStr}</span>
+                    </div>
+                `;
+                return;
+            }
+
+            let formattedMsg = msg.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#0284c7; text-decoration:underline;">$1</a>');
+
+            if(msg.media_url) {
+                if(msg.media_url.startsWith('data:image')) {
+                    formattedMsg = `<img src="${msg.media_url}" style="max-width:100%; border-radius:8px; margin-bottom:5px;"><br>` + formattedMsg;
+                } else {
+                    formattedMsg = `<a href="${msg.media_url}" download="${msg.message}" class="btn btn-primary" style="padding:5px; font-size:0.8rem; display:block; margin-bottom:5px;"><i class="fas fa-download"></i> تحميل المرفق</a>`;
+                }
+            }
+
+            let replyHtml = '';
+            if(msg.reply_to) {
+                replyHtml = `<div class="msg-reply-box"><i class="fas fa-reply"></i> رداً على رسالة سابقة</div>`;
+            }
+
+            msgContainer.innerHTML += `
+                <div class="bubble ${bubbleClass}" id="msg-${msg.id}">
+                    ${actionMenu}
+                    ${senderNameHtml}
+                    ${replyHtml}
+                    ${formattedMsg}
+                    <span class="bubble-time" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>${timeStr}</span>
+                        <span>${readReceipt}</span>
+                    </span>
+                </div>
+            `;
+        }
+
+        async function showMsgOptions(msgId, isMe) {
+            let optionsHtml = '';
+            optionsHtml += `<button class="btn btn-success" style="margin-bottom:5px; width:100%;" onclick="replyToMsg('${msgId}')"><i class="fas fa-reply"></i> رد على الرسالة</button> `;
+            optionsHtml += `<button class="btn btn-danger" style="margin-bottom:5px; width:100%;" onclick="deleteMsgForMe('${msgId}')">حذف لدي فقط</button> `;
+            if(isMe || currentUser.role === 'moderator') {
+                optionsHtml += `<button class="btn btn-danger" style="width:100%; background:#7f1d1d;" onclick="deleteMsgForEveryone('${msgId}')">حذف لدى الجميع</button>`;
+            }
+
+            Swal.fire({ title: 'خيارات الرسالة', html: optionsHtml, showConfirmButton: false, showCloseButton: true });
+        }
+
+        async function deleteMsgForEveryone(msgId) {
+            if(!confirm('سيتم حذف الرسالة من عند جميع الأطراف. هل أنت متأكد؟')) return;
+            await supabase.from('chat_messages').update({ is_deleted_for_everyone: true, message: '' }).eq('id', msgId);
+            Swal.close();
+        }
+
+        async function deleteMsgForMe(msgId) {
+            Swal.close();
+            const { data } = await supabase.from('chat_messages').select('deleted_for').eq('id', msgId).single();
+            let currentDeletedFor = data.deleted_for || [];
+            if(!currentDeletedFor.includes(currentUser.username)) {
+                currentDeletedFor.push(currentUser.username);
+                await supabase.from('chat_messages').update({ deleted_for: currentDeletedFor }).eq('id', msgId);
+                document.getElementById(`msg-${msgId}`).style.display = 'none'; 
+            }
         }
 
         function scrollToChatBottom() {
@@ -3362,14 +3541,89 @@ function searchGlobal() {
             box.scrollTop = box.scrollHeight;
         }
 
+        function replyToMsg(msgId) {
+            Swal.close();
+            document.getElementById('reply-to-msg-id').value = msgId;
+            document.getElementById('replying-to-text').innerHTML = `<i class="fas fa-reply"></i> رد على رسالة...`;
+            document.getElementById('replying-to-container').classList.remove('hidden');
+            document.getElementById('chat-input-msg').focus();
+        }
+
+        function cancelReply() {
+            document.getElementById('reply-to-msg-id').value = '';
+            document.getElementById('replying-to-container').classList.add('hidden');
+        }
+
+        async function uploadChatMedia(input) {
+            const file = input.files[0];
+            if(!file || !activeChatReceiver) return;
+            if(file.size > 2 * 1024 * 1024) return alert("حجم الملف يجب أن لا يتعدى 2 ميجا");
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result;
+                const payload = { sender: currentUser.username, receiver: activeChatReceiver, message: file.name, media_url: base64 };
+                await supabase.from('chat_messages').insert([payload]);
+                input.value = ''; 
+            };
+            reader.readAsDataURL(file);
+        }
+
         async function sendChatMessage() {
             const input = document.getElementById('chat-input-msg');
             const text = input.value.trim();
+            const replyToId = document.getElementById('reply-to-msg-id').value;
+            
             if(!text || !activeChatReceiver) return;
 
-            input.value = ''; // تفريغ الخانة فوراً لسرعة الإرسال
-            await supabase.from('chat_messages').insert([{ sender: currentUser.username, receiver: activeChatReceiver, message: text }]);
-            // الرسالة ستُرسم أوتوماتيكياً بفضل الـ Realtime!
+            input.value = ''; 
+            cancelReply();
+            
+            const payload = { sender: currentUser.username, receiver: activeChatReceiver, message: text };
+            if(replyToId) payload.reply_to = replyToId;
+            
+            await supabase.from('chat_messages').insert([payload]);
+        }
+
+        // ==========================================
+        // دوال إنشاء المجموعات (Group Management)
+        // ==========================================
+        function openCreateGroupModal() {
+            document.getElementById('new-group-name').value = '';
+            const list = document.getElementById('group-members-list');
+            list.innerHTML = '';
+            
+            allUsersCache.forEach(u => {
+                list.innerHTML += `
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;">
+                        <input type="checkbox" class="group-member-cb" value="${u.username}">
+                        ${u.username}
+                    </label>
+                `;
+            });
+            openModal('modal-create-group');
+        }
+
+        async function createChatGroup() {
+            const name = document.getElementById('new-group-name').value.trim();
+            const checkboxes = document.querySelectorAll('.group-member-cb:checked');
+            
+            if(!name) return alert("يرجى كتابة اسم المجموعة");
+            if(checkboxes.length < 2) return alert("يجب اختيار شخصين على الأقل لإنشاء مجموعة");
+
+            const { data: groupData, error: groupErr } = await supabase.from('chat_groups').insert([{ name: name, created_by: currentUser.username }]).select();
+            if(groupErr || !groupData) return alert("حدث خطأ أثناء إنشاء المجموعة");
+            
+            const groupId = groupData[0].id;
+            
+            let members = [{ group_id: groupId, username: currentUser.username }];
+            checkboxes.forEach(cb => members.push({ group_id: groupId, username: cb.value }));
+            
+            await supabase.from('chat_group_members').insert(members);
+            
+            closeModal('modal-create-group');
+            Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم إنشاء المجموعة بنجاح!', showConfirmButton:false, timer:2000});
+            initChat(); 
         }
 
         // ==========================================
